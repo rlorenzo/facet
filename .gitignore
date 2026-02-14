@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+debug.log
+*.db
+*.db.backup.*
+pretrained_models/
+aesthetic_predictor_weights.pth
+
+# Test/temp data
+photos/
+@eaDir/
+
+# Config backups
+scoring_config.json.backup.*
+
+# Archives
+*.zip

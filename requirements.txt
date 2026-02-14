@@ -1,0 +1,52 @@
+# Facet Dependencies
+# Install with: pip install -r requirements.txt
+# Note: Also requires 'exiftool' command-line tool (install via system package manager)
+
+# Deep Learning / GPU
+torch>=2.0.0
+torchvision>=0.15.0
+open-clip-torch>=2.20.0
+
+# Advanced VLM Models - only needed for 8gb/16gb VRAM profiles in scoring_config.json
+# The "legacy" profile uses CLIP+MLP and doesn't require these packages
+# Uncomment if using "vram_profile": "8gb" or "16gb":
+# transformers>=4.57.0              # Required for Qwen3-VL tagger
+# accelerate>=0.25.0
+# sentencepiece                     # Required for Q-Align tokenizer
+# qwen-vl-utils>=0.0.2              # Only needed for Qwen2-VL (24gb profile)
+
+# RAM++ Tagger (currently unusable due to excessive RAM usage)
+# fairscale                         # Required dependency for RAM++
+# ram                               # Install from GitHub, not PyPI
+
+# Image Processing
+opencv-python>=4.8.0
+pillow>=10.0.0
+imagehash>=4.3.0
+rawpy>=0.18.0
+
+# Face Detection
+insightface>=0.7.0
+# ONNX Runtime - choose ONE based on your setup:
+# onnxruntime>=1.15.0           # CPU only (works everywhere)
+# onnxruntime-gpu>=1.17.0       # GPU acceleration for CUDA 12.x
+# onnxruntime-gpu>=1.15.0,<1.18 # GPU acceleration for CUDA 11.8
+
+# Quality Assessment (PyIQA models: TOPIQ, HyperIQA, DBCNN, MUSIQ)
+pyiqa>=0.1.10
+
+# Scientific Computing
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+hdbscan>=0.8.40  # Face clustering (standalone library, sklearn's HDBSCAN has epsilon bug)
+
+# Web Interface
+flask>=2.3.0
+
+# Utilities
+tqdm>=4.65.0
+exifread>=3.0.0
+
+# System Monitoring (for batch processing auto-tuning)
+psutil>=5.9.0

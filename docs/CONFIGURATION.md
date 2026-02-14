@@ -1,0 +1,989 @@
+# Configuration Reference
+
+All settings are in `scoring_config.json`. After modifying, run `python photos.py --recompute-average` to update scores (no GPU needed).
+
+## Table of Contents
+
+- [Categories](#categories)
+- [Scoring](#scoring)
+- [Thresholds](#thresholds)
+- [Composition](#composition)
+- [EXIF Adjustments](#exif-adjustments)
+- [Exposure](#exposure)
+- [Penalties](#penalties)
+- [Normalization](#normalization)
+- [Models](#models)
+- [Processing](#processing)
+- [Burst Detection](#burst-detection)
+- [Face Detection](#face-detection)
+- [Face Clustering](#face-clustering)
+- [Face Processing](#face-processing)
+- [Monochrome Detection](#monochrome-detection)
+- [Tagging](#tagging)
+- [Analysis](#analysis)
+- [Viewer](#viewer)
+- [Performance](#performance)
+
+---
+
+## Categories
+
+Array of category definitions. See [Scoring](SCORING.md) for detailed category documentation.
+
+Each category has:
+- `name` - Category identifier
+- `priority` - Lower = higher priority (evaluated first)
+- `filters` - Conditions for matching
+- `weights` - Scoring metric weights (must sum to 100)
+- `modifiers` - Behavior adjustments
+- `tags` - CLIP vocabulary for tag-based matching
+
+---
+
+## Scoring
+
+```json
+{
+  "scoring": {
+    "score_min": 0.0,
+    "score_max": 10.0,
+    "score_precision": 2
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `score_min` | `0.0` | Minimum possible score |
+| `score_max` | `10.0` | Maximum possible score |
+| `score_precision` | `2` | Decimal places for scores |
+
+---
+
+## Thresholds
+
+Detection thresholds for automatic categorization.
+
+```json
+{
+  "thresholds": {
+    "portrait_face_ratio_percent": 5,
+    "blink_penalty_percent": 50,
+    "night_luminance_threshold": 0.15,
+    "night_iso_threshold": 3200,
+    "long_exposure_shutter_threshold": 1.0,
+    "astro_shutter_threshold": 10.0
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `portrait_face_ratio_percent` | `5` | Face > 5% of frame = portrait |
+| `blink_penalty_percent` | `50` | Score multiplier when blink detected (0.5x) |
+| `night_luminance_threshold` | `0.15` | Mean luminance below this = night |
+| `night_iso_threshold` | `3200` | ISO above this = low-light |
+| `long_exposure_shutter_threshold` | `1.0` | Shutter > 1s = long exposure |
+| `astro_shutter_threshold` | `10.0` | Shutter > 10s = astrophotography |
+
+---
+
+## Composition
+
+Rule-based composition scoring (used when SAMP-Net is not active).
+
+```json
+{
+  "composition": {
+    "power_point_weight": 2.0,
+    "line_weight": 1.0
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `power_point_weight` | `2.0` | Weight for rule-of-thirds placement |
+| `line_weight` | `1.0` | Weight for leading lines |
+
+---
+
+## EXIF Adjustments
+
+Automatic scoring adjustments based on camera settings.
+
+```json
+{
+  "exif_adjustments": {
+    "iso_sharpness_compensation": true,
+    "aperture_isolation_boost": true
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `iso_sharpness_compensation` | `true` | Reduce sharpness penalty for high-ISO |
+| `aperture_isolation_boost` | `true` | Boost isolation for wide apertures (f/1.4-f/2.8) |
+
+---
+
+## Exposure
+
+Controls exposure analysis and clipping detection.
+
+```json
+{
+  "exposure": {
+    "shadow_clip_threshold_percent": 15,
+    "highlight_clip_threshold_percent": 10,
+    "silhouette_detection": true
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `shadow_clip_threshold_percent` | `15` | Flag if > 15% pixels pure black |
+| `highlight_clip_threshold_percent` | `10` | Flag if > 10% pixels pure white |
+| `silhouette_detection` | `true` | Detect intentional silhouettes |
+
+---
+
+## Penalties
+
+Score penalties for technical issues.
+
+```json
+{
+  "penalties": {
+    "noise_sigma_threshold": 4.0,
+    "noise_max_penalty_points": 1.5,
+    "noise_penalty_per_sigma": 0.3,
+    "bimodality_threshold": 2.5,
+    "bimodality_penalty_points": 0.5,
+    "leading_lines_blend_percent": 30,
+    "oversaturation_threshold": 0.9,
+    "oversaturation_pixel_percent": 5,
+    "oversaturation_penalty_points": 0.5
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `noise_sigma_threshold` | `4.0` | Noise above this triggers penalty |
+| `noise_max_penalty_points` | `1.5` | Maximum noise penalty |
+| `noise_penalty_per_sigma` | `0.3` | Points per sigma above threshold |
+| `bimodality_threshold` | `2.5` | Histogram bimodality coefficient |
+| `bimodality_penalty_points` | `0.5` | Penalty for bimodal histograms |
+| `leading_lines_blend_percent` | `30` | Blend into comp_score |
+| `oversaturation_threshold` | `0.9` | Mean saturation threshold |
+| `oversaturation_pixel_percent` | `5` | Reserved for pixel-level detection |
+| `oversaturation_penalty_points` | `0.5` | Oversaturation penalty |
+
+**Noise penalty formula:**
+```
+penalty = min(noise_max_penalty_points, (noise_sigma - threshold) * noise_penalty_per_sigma)
+```
+
+---
+
+## Normalization
+
+Controls how raw metrics are scaled to 0-10 scores.
+
+```json
+{
+  "normalization": {
+    "method": "percentile",
+    "percentile_target": 90,
+    "per_category": true,
+    "category_min_samples": 50
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `method` | `"percentile"` | Normalization method |
+| `percentile_target` | `90` | 90th percentile = score of 10.0 |
+| `per_category` | `true` | Category-specific normalization |
+| `category_min_samples` | `50` | Minimum photos for per-category |
+
+---
+
+## Models
+
+Controls which AI models are used based on VRAM.
+
+```json
+{
+  "models": {
+    "vram_profile": "auto",
+    "keep_in_ram": "auto",
+    "profiles": {
+      "legacy": {
+        "aesthetic_model": "clip-mlp",
+        "composition_model": "samp-net",
+        "tagging_model": "clip",
+        "description": "CPU-optimized: TOPIQ aesthetic + SAMP-Net composition (8GB+ RAM, no GPU needed)"
+      },
+      "8gb": {
+        "aesthetic_model": "clip-mlp",
+        "composition_model": "samp-net",
+        "tagging_model": "qwen3-vl-2b",
+        "description": "TOPIQ aesthetic + SAMP-Net composition + Qwen3-VL tagging (6-14GB VRAM)"
+      },
+      "16gb": {
+        "aesthetic_model": "topiq",
+        "composition_model": "samp-net",
+        "tagging_model": "clip",
+        "description": "TOPIQ aesthetic, SAMP-Net composition (~14GB VRAM)"
+      },
+      "24gb": {
+        "aesthetic_model": "topiq",
+        "composition_model": "qwen2-vl-2b",
+        "tagging_model": "qwen2.5-vl-7b",
+        "description": "TOPIQ aesthetic, Qwen2-VL composition (~18GB VRAM)"
+      }
+    },
+    "qwen2_vl": {
+      "model_path": "Qwen/Qwen2-VL-2B-Instruct",
+      "torch_dtype": "bfloat16",
+      "max_new_tokens": 256
+    },
+    "qwen2_5_vl_7b": {
+      "model_path": "Qwen/Qwen2.5-VL-7B-Instruct",
+      "torch_dtype": "bfloat16"
+    },
+    "ram_plus": {
+      "model_path": "xinyu1205/recognize-anything-plus-model",
+      "checkpoint": "ram_plus_swin_large_14m.pth"
+    },
+    "clip": {
+      "model_name": "ViT-L-14",
+      "pretrained": "laion2b_s32b_b82k",
+      "similarity_threshold_percent": 22
+    },
+    "samp_net": {
+      "model_path": "pretrained_models/samp_net.pth",
+      "download_url": "https://github.com/bcmi/Image-Composition-Assessment-with-SAMP/releases/download/v1.0/samp_net.pth",
+      "input_size": 384,
+      "patterns": [
+        "none", "center", "rule_of_thirds", "golden_ratio", "triangle",
+        "horizontal", "vertical", "diagonal", "symmetric", "curved",
+        "radial", "vanishing_point", "pattern", "fill_frame"
+      ]
+    }
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `vram_profile` | `"auto"` | Active profile (`auto`, `legacy`, `8gb`, `16gb`, `24gb`) |
+| `keep_in_ram` | `"auto"` | Keep models in RAM between multi-pass chunks (`"auto"`, `"always"`, `"never"`). `auto` checks available RAM before caching. Reduces model load time on subsequent chunks. |
+| `qwen2_vl.model_path` | `"Qwen/Qwen2-VL-2B-Instruct"` | HuggingFace model path |
+| `qwen2_vl.torch_dtype` | `"bfloat16"` | Precision |
+| `qwen2_vl.max_new_tokens` | `256` | Max generation tokens |
+| `qwen2_5_vl_7b.model_path` | `"Qwen/Qwen2.5-VL-7B-Instruct"` | HuggingFace model path for VLM tagging |
+| `qwen2_5_vl_7b.torch_dtype` | `"bfloat16"` | Precision |
+| `qwen3_vl_2b.model_path` | `"Qwen/Qwen3-VL-2B-Instruct"` | HuggingFace model path for lightweight VLM tagging |
+| `qwen3_vl_2b.torch_dtype` | `"bfloat16"` | Precision |
+| `qwen3_vl_2b.max_new_tokens` | `100` | Max generation tokens |
+| `clip.model_name` | `"ViT-L-14"` | CLIP variant |
+| `clip.pretrained` | `"laion2b_s32b_b82k"` | Pre-trained weights |
+| `samp_net.input_size` | `384` | Image size for inference |
+
+### VRAM Auto-Detection
+
+When `vram_profile` is set to `"auto"` (default), the system:
+1. Detects available GPU VRAM at startup
+2. Selects the best profile that fits
+3. Logs the selected profile
+
+| Detected VRAM | Selected Profile |
+|---------------|------------------|
+| ≥ 20GB | `24gb` |
+| ≥ 14GB | `16gb` |
+| ≥ 6GB | `8gb` |
+| No GPU | `legacy` (uses system RAM) |
+
+---
+
+## Quality Assessment Models
+
+Controls which model assesses image quality/aesthetics. Uses the [pyiqa](https://github.com/chaofengc/IQA-PyTorch) library for state-of-the-art models.
+
+```json
+{
+  "quality": {
+    "model": "auto"
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `model` | `"auto"` | Quality model: `auto`, `topiq`, `hyperiqa`, `dbcnn`, `musiq`, `clip-mlp` |
+
+### Available Quality Models
+
+| Model | SRCC | VRAM | Speed | Best For |
+|-------|------|------|-------|----------|
+| **topiq** | **0.93** | ~2GB | Fast | **Best accuracy, recommended default** |
+| **hyperiqa** | 0.90 | ~2GB | Fast | Efficient alternative to TOPIQ |
+| **dbcnn** | 0.90 | ~2GB | Fast | Dual-branch CNN, good accuracy |
+| **musiq** | 0.87 | ~2GB | Fast | Multi-scale, handles any resolution |
+| **clipiqa+** | 0.86 | ~4GB | Fast | CLIP with learned quality prompts |
+| **clip-mlp** | 0.76 | ~4GB | Fast | Legacy fallback |
+
+**SRCC** = Spearman Rank Correlation Coefficient on KonIQ-10k benchmark. Higher is better (1.0 = perfect).
+
+### Model Comparison
+
+#### TOPIQ (Recommended)
+- **Architecture**: ResNet50 backbone with top-down attention
+- **Accuracy**: Best on KonIQ-10k benchmark (0.93 SRCC)
+- **VRAM**: ~2GB - runs on any modern GPU
+- **Speed**: ~10ms per image
+- **Strengths**: Excellent accuracy/efficiency ratio, focuses on semantically important distortions
+- **Weaknesses**: No text explanations
+
+#### HyperIQA
+- **Architecture**: Hyper-network predicting quality weights
+- **Accuracy**: 0.90 SRCC on KonIQ-10k
+- **VRAM**: ~2GB
+- **Speed**: ~8ms per image
+- **Strengths**: Very efficient, content-adaptive
+- **Weaknesses**: Slightly lower accuracy than TOPIQ
+
+#### DBCNN
+- **Architecture**: Dual-branch CNN (synthetic + authentic distortions)
+- **Accuracy**: 0.90 SRCC on KonIQ-10k
+- **VRAM**: ~2GB
+- **Speed**: ~10ms per image
+- **Strengths**: Good on both synthetic and real-world distortions
+- **Weaknesses**: Two-branch design slightly slower
+
+#### MUSIQ
+- **Architecture**: Multi-scale Transformer (Google)
+- **Accuracy**: 0.87 SRCC on KonIQ-10k
+- **VRAM**: ~2GB
+- **Speed**: ~15ms per image
+- **Strengths**: Handles any resolution without resizing, multi-scale analysis
+- **Weaknesses**: Slightly lower accuracy, transformer overhead
+
+#### CLIP-MLP (Legacy)
+- **Architecture**: CLIP ViT-L-14 + trained MLP head
+- **Accuracy**: ~0.76 SRCC
+- **VRAM**: ~4GB
+- **Speed**: ~5ms per image
+- **Strengths**: Fast, uses existing CLIP model
+- **Weaknesses**: Lower accuracy than specialized IQA models
+
+### Auto-Selection Logic
+
+When `model: "auto"`:
+
+```
+use topiq (best accuracy, fits any VRAM >= 2GB)
+```
+
+### Switching Quality Models
+
+1. Edit `scoring_config.json`:
+   ```json
+   "quality": {
+     "model": "topiq"
+   }
+   ```
+
+2. Re-score existing photos (optional):
+   ```bash
+   python photos.py /path --pass quality
+   python photos.py --recompute-average
+   ```
+
+---
+
+## Processing
+
+Unified processing settings for GPU batch processing and multi-pass mode.
+
+```json
+{
+  "processing": {
+    "mode": "auto",
+    "gpu_batch_size": 16,
+    "ram_chunk_size": 100,
+    "num_workers": 4,
+    "auto_tuning": {
+      "enabled": true,
+      "monitor_interval_seconds": 5,
+      "tuning_interval_images": 50,
+      "min_processing_workers": 1,
+      "max_processing_workers": 24,
+      "min_gpu_batch_size": 2,
+      "max_gpu_batch_size": 32,
+      "min_ram_chunk_size": 10,
+      "max_ram_chunk_size": 500,
+      "memory_limit_percent": 85,
+      "cpu_target_percent": 80,
+      "metrics_print_interval_seconds": 30
+    },
+    "thumbnails": {
+      "photo_size": 640,
+      "photo_quality": 80,
+      "face_padding_ratio": 0.3
+    }
+  }
+}
+```
+
+### Key Concepts
+
+**`gpu_batch_size`** - How many images are processed together on the GPU in a single forward pass. Limited by VRAM. Auto-tuned: reduced when GPU memory exceeds limit.
+
+**`ram_chunk_size`** - How many images are cached in RAM between model passes (multi-pass mode only). Reduces disk I/O by loading images once per chunk. Limited by system RAM. Auto-tuned: reduced when system memory exceeds limit.
+
+### Settings Reference
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mode` | `"auto"` | Processing mode: `auto`, `multi-pass`, `single-pass` |
+| `gpu_batch_size` | `16` | Images per GPU batch (VRAM-limited) |
+| `ram_chunk_size` | `100` | Images per RAM chunk (multi-pass, ~4GB RAM at 100) |
+| `num_workers` | `4` | Image loader threads |
+| **auto_tuning** | | |
+| `enabled` | `true` | Enable auto-tuning |
+| `monitor_interval_seconds` | `5` | Resource check interval |
+| `tuning_interval_images` | `50` | Re-tune every N images |
+| `min_processing_workers` | `1` | Minimum loader threads |
+| `max_processing_workers` | `24` | Maximum loader threads |
+| `min_gpu_batch_size` | `2` | Minimum GPU batch size |
+| `max_gpu_batch_size` | `32` | Maximum GPU batch size |
+| `min_ram_chunk_size` | `10` | Minimum RAM chunk size |
+| `max_ram_chunk_size` | `500` | Maximum RAM chunk size |
+| `memory_limit_percent` | `85` | System memory usage limit |
+| `cpu_target_percent` | `80` | CPU usage target |
+| `metrics_print_interval_seconds` | `30` | Stats print interval |
+| **thumbnails** | | |
+| `photo_size` | `640` | Stored thumbnail size (pixels) |
+| `photo_quality` | `80` | Thumbnail JPEG quality |
+| `face_padding_ratio` | `0.3` | Padding around face crops |
+
+### Processing Modes
+
+| Mode | Description |
+|------|-------------|
+| `auto` | Automatically selects multi-pass or single-pass based on VRAM |
+| `multi-pass` | Sequential model loading (works with limited VRAM) |
+| `single-pass` | All models loaded at once (requires high VRAM) |
+
+### How Multi-Pass Works
+
+Instead of loading all models at once (~18GB VRAM), multi-pass:
+
+1. Loads images in RAM chunks (default: 100 images)
+2. For each chunk, runs models sequentially:
+   - Load model → process chunk → unload model
+3. Combines results in final aggregation pass
+
+**Benefits:**
+- Use high-quality models (Qwen2.5-VL) even with limited VRAM
+- Each image loaded only once per chunk
+- Automatic pass grouping optimizes for available VRAM
+
+### Auto-Tuning Behavior
+
+The system monitors resource usage and automatically adjusts:
+
+| Metric | Action |
+|--------|--------|
+| GPU memory > limit | Reduce `gpu_batch_size` by 25% |
+| System RAM > limit | Reduce `ram_chunk_size` by 25% |
+| System RAM < (limit - 20%) | Increase `ram_chunk_size` by 25% |
+| CPU > target | Suggest fewer workers |
+| Queue timeouts > 5% | Suggest more workers |
+
+### Dynamic Pass Grouping
+
+When VRAM allows, multiple small models run together:
+
+| VRAM | Pass 1 | Pass 2 | Pass 3 |
+|------|--------|--------|--------|
+| 8GB | CLIP + SAMP-Net + InsightFace | TOPIQ | - |
+| 12GB | CLIP + SAMP-Net + InsightFace + TOPIQ | - | - |
+| 16GB | CLIP + SAMP-Net + InsightFace + TOPIQ | Qwen2.5-VL | - |
+| 24GB+ | All models together (single-pass) | - | - |
+
+### CLI Options
+
+```bash
+# Default: auto multi-pass with optimal grouping
+python photos.py /path/to/photos
+
+# Force single-pass (all models loaded at once)
+python photos.py /path --single-pass
+
+# Run specific pass only
+python photos.py /path --pass quality      # TOPIQ only
+python photos.py /path --pass tags         # Configured tagger only
+python photos.py /path --pass composition  # SAMP-Net only
+python photos.py /path --pass faces        # InsightFace only
+
+# List available models
+python photos.py --list-models
+```
+
+---
+
+## Burst Detection
+
+Groups similar photos taken in quick succession.
+
+```json
+{
+  "burst_detection": {
+    "similarity_threshold_percent": 65,
+    "time_window_minutes": 2,
+    "rapid_burst_seconds": 0.5
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `similarity_threshold_percent` | `65` | Image hash similarity threshold |
+| `time_window_minutes` | `2` | Maximum time between photos |
+| `rapid_burst_seconds` | `0.5` | Photos within this auto-grouped |
+
+---
+
+## Face Detection
+
+InsightFace face detection settings.
+
+```json
+{
+  "face_detection": {
+    "min_confidence_percent": 65,
+    "min_face_size": 20,
+    "blink_ear_threshold": 0.28,
+    "min_faces_for_group": 4
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `min_confidence_percent` | `65` | Minimum detection confidence |
+| `min_face_size` | `20` | Minimum face size in pixels |
+| `blink_ear_threshold` | `0.28` | Eye Aspect Ratio for blink detection |
+| `min_faces_for_group` | `4` | Minimum faces to classify as group portrait (recomputed on `--recompute-average`) |
+
+---
+
+## Face Clustering
+
+HDBSCAN clustering for face recognition.
+
+```json
+{
+  "face_clustering": {
+    "enabled": true,
+    "min_faces_per_person": 2,
+    "min_samples": 2,
+    "auto_merge_distance_percent": 15,
+    "clustering_algorithm": "best",
+    "leaf_size": 40,
+    "use_gpu": "auto",
+    "merge_threshold": 0.6,
+    "chunk_size": 10000
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `true` | Enable face clustering |
+| `min_faces_per_person` | `2` | Minimum photos per person |
+| `min_samples` | `2` | HDBSCAN min_samples parameter |
+| `auto_merge_distance_percent` | `15` | Auto-merge within this distance |
+| `clustering_algorithm` | `"best"` | HDBSCAN algorithm |
+| `leaf_size` | `40` | Tree leaf size (CPU only) |
+| `use_gpu` | `"auto"` | GPU mode: `auto`, `always`, `never` |
+| `merge_threshold` | `0.6` | Centroid similarity for matching |
+| `chunk_size` | `10000` | Processing chunk size |
+
+**Clustering algorithms:**
+
+| Algorithm | Complexity | Best For |
+|-----------|------------|----------|
+| `boruvka_balltree` | O(n log n) | High-dimensional data (recommended) |
+| `boruvka_kdtree` | O(n log n) | Low-dimensional data |
+| `prims_balltree` | O(n²) | Memory-constrained, high-dim |
+| `prims_kdtree` | O(n²) | Memory-constrained, low-dim |
+| `best` | Auto | Let HDBSCAN decide |
+
+---
+
+## Face Processing
+
+Controls face extraction and thumbnail generation.
+
+```json
+{
+  "face_processing": {
+    "crop_padding": 0.3,
+    "use_db_thumbnails": true,
+    "face_thumbnail_size": 640,
+    "face_thumbnail_quality": 90,
+    "extract_workers": 2,
+    "extract_batch_size": 16,
+    "refill_workers": 4,
+    "refill_batch_size": 100,
+    "auto_tuning": {
+      "enabled": true,
+      "memory_limit_percent": 80,
+      "min_batch_size": 8,
+      "monitor_interval_seconds": 5
+    }
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `crop_padding` | `0.3` | Padding ratio for face crops |
+| `use_db_thumbnails` | `true` | Use stored thumbnails |
+| `face_thumbnail_size` | `640` | Thumbnail size in pixels |
+| `face_thumbnail_quality` | `90` | JPEG quality |
+| `extract_workers` | `2` | Parallel extraction workers |
+| `extract_batch_size` | `16` | Extraction batch size |
+| `refill_workers` | `4` | Thumbnail refill workers |
+| `refill_batch_size` | `100` | Refill batch size |
+| **auto_tuning** | | |
+| `enabled` | `true` | Enable memory-based tuning |
+| `memory_limit_percent` | `80` | Memory usage limit |
+| `min_batch_size` | `8` | Minimum batch size |
+| `monitor_interval_seconds` | `5` | Check interval |
+
+---
+
+## Monochrome Detection
+
+Black & white photo detection.
+
+```json
+{
+  "monochrome_detection": {
+    "saturation_threshold_percent": 5
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `saturation_threshold_percent` | `5` | Mean saturation < 5% = monochrome |
+
+---
+
+## Tagging
+
+General tagging settings. The tagging model is configured per-profile in `models.profiles.*.tagging_model`.
+
+```json
+{
+  "tagging": {
+    "enabled": true,
+    "max_tags": 5
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `true` | Enable tagging |
+| `max_tags` | `5` | Maximum tags per photo |
+
+**Note:** CLIP-specific settings like `similarity_threshold_percent` are in the `models.clip` section.
+
+### Available Tagging Models
+
+Configured via `models.profiles.*.tagging_model`:
+
+| Model | VRAM | Speed | Description |
+|-------|------|-------|-------------|
+| `clip` | ~4GB | Fast (~5ms) | CLIP ViT-L-14 embedding similarity to vocabulary |
+| `qwen3-vl-2b` | ~4GB | Moderate (~100ms) | Lightweight vision-language model (Qwen3-VL 2B) |
+| `qwen2.5-vl-7b` | ~16GB | Slow (~200ms) | Vision-language model for complex scenes |
+
+### Default Tagging Models per Profile
+
+| Profile | Tagging Model |
+|---------|---------------|
+| `legacy` | `clip` |
+| `8gb` | `qwen3-vl-2b` |
+| `16gb` | `clip` |
+| `24gb` | `qwen2.5-vl-7b` |
+
+### Re-tagging Photos
+
+```bash
+python photos.py --recompute-tags
+```
+
+---
+
+## Analysis
+
+Thresholds for `--compute-recommendations`.
+
+```json
+{
+  "analysis": {
+    "aesthetic_max_threshold": 9.0,
+    "aesthetic_target": 9.5,
+    "quality_avg_threshold": 7.5,
+    "quality_weight_threshold_percent": 10,
+    "correlation_dominant_threshold": 0.5,
+    "category_min_samples": 50,
+    "category_imbalance_threshold": 0.5,
+    "score_clustering_std_threshold": 1.0,
+    "top_score_threshold": 8.5,
+    "exposure_avg_threshold": 8.0
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `aesthetic_max_threshold` | `9.0` | Warn if max aesthetic below this |
+| `aesthetic_target` | `9.5` | Target for aesthetic_scale |
+| `quality_avg_threshold` | `7.5` | "High value" quality threshold |
+| `quality_weight_threshold_percent` | `10` | Warn if quality weight ≤ this |
+| `correlation_dominant_threshold` | `0.5` | "Dominant signal" warning |
+| `category_min_samples` | `50` | Minimum photos per category |
+| `category_imbalance_threshold` | `0.5` | Score gap warning |
+| `score_clustering_std_threshold` | `1.0` | Warn if std dev < this |
+| `top_score_threshold` | `8.5` | Warn if max aggregate < this |
+| `exposure_avg_threshold` | `8.0` | Warn if avg exposure > this |
+
+---
+
+## Viewer
+
+Web gallery display and behavior.
+
+```json
+{
+  "viewer": {
+    "default_category": "",
+    "edition_password": "",
+    "comparison_mode": {
+      "min_comparisons_for_optimization": 50,
+      "pair_selection_strategy": "uncertainty",
+      "show_current_scores": true
+    },
+    "sort_options": { ... },
+    "pagination": {
+      "default_per_page": 25
+    },
+    "dropdowns": {
+      "max_cameras": 50,
+      "max_lenses": 50,
+      "max_persons": 50,
+      "max_tags": 20,
+      "min_photos_for_person": 1
+    },
+    "display": {
+      "tags_per_photo": 4,
+      "card_width_px": 168,
+      "image_width_px": 160
+    },
+    "face_thumbnails": {
+      "output_size_px": 64,
+      "jpeg_quality": 80,
+      "crop_padding_ratio": 0.2,
+      "min_crop_size_px": 20
+    },
+    "quality_thresholds": {
+      "good": 6,
+      "great": 7,
+      "excellent": 8,
+      "best": 9
+    },
+    "photo_types": {
+      "top_picks_min_score": 7,
+      "top_picks_min_face_ratio": 0.2,
+      "top_picks_weights": {
+        "aggregate_percent": 10,
+        "aesthetic_percent": 35,
+        "composition_percent": 25,
+        "face_quality_percent": 30
+      },
+      "low_light_max_luminance": 0.2
+    },
+    "defaults": {
+      "hide_blinks": true,
+      "hide_bursts": true,
+      "hide_details": false,
+      "sort": "aggregate",
+      "sort_direction": "DESC",
+      "type": ""
+    },
+    "cache_ttl_seconds": 60,
+    "notification_duration_ms": 2000
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `default_category` | `""` | Default category filter |
+| `edition_password` | `""` | Password to unlock edition mode (empty = disabled) |
+| **comparison_mode** | | |
+| `min_comparisons_for_optimization` | `50` | Minimum for optimization |
+| `pair_selection_strategy` | `"uncertainty"` | Default strategy |
+| `show_current_scores` | `true` | Show scores during comparison |
+| **pagination** | | |
+| `default_per_page` | `25` | Photos per page |
+| **dropdowns** | | |
+| `max_cameras` | `50` | Max cameras in dropdown |
+| `max_lenses` | `50` | Max lenses |
+| `max_persons` | `50` | Max persons |
+| `max_tags` | `20` | Max tags |
+| `min_photos_for_person` | `1` | Hide persons with fewer photos from dropdown |
+| **display** | | |
+| `tags_per_photo` | `4` | Tags shown on cards |
+| `card_width_px` | `168` | Card width |
+| `image_width_px` | `160` | Image width |
+| **face_thumbnails** | | |
+| `output_size_px` | `64` | Thumbnail size |
+| `jpeg_quality` | `80` | JPEG quality |
+| `crop_padding_ratio` | `0.2` | Face padding |
+| `min_crop_size_px` | `20` | Minimum crop size |
+| **quality_thresholds** | | |
+| `good` | `6` | Good threshold |
+| `great` | `7` | Great threshold |
+| `excellent` | `8` | Excellent threshold |
+| `best` | `9` | Best threshold |
+| **photo_types** | | |
+| `top_picks_min_score` | `7` | Top Picks minimum |
+| `top_picks_min_face_ratio` | `0.2` | Face ratio for weights |
+| `low_light_max_luminance` | `0.2` | Low light threshold |
+| **defaults** | | |
+| `type` | `""` | Default photo type filter (e.g., `"portraits"`, `"landscapes"`, or `""` for All) |
+| `sort` | `"aggregate"` | Default sort column |
+| `sort_direction` | `"DESC"` | Default sort direction (`"ASC"` or `"DESC"`) |
+| `hide_blinks` | `true` | Hide blink photos by default |
+| `hide_bursts` | `true` | Show only best of burst by default |
+| `hide_details` | `false` | Hide photo details on cards by default |
+| **Other** | | |
+| `cache_ttl_seconds` | `60` | Query cache TTL |
+| `notification_duration_ms` | `2000` | Toast duration |
+
+### Features
+
+Toggle optional features to reduce memory usage or simplify the UI:
+
+```json
+{
+  "viewer": {
+    "features": {
+      "show_similar_button": true,
+      "show_merge_suggestions": true,
+      "show_rating_controls": true,
+      "show_rating_badge": true
+    }
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `show_similar_button` | `true` | Show "Find Similar" button on photo cards (uses numpy for CLIP similarity) |
+| `show_merge_suggestions` | `true` | Enable merge suggestions feature on manage persons page |
+| `show_rating_controls` | `true` | Show star rating and favorite controls |
+| `show_rating_badge` | `true` | Show rating badge on photo cards |
+
+**Memory optimization:** Setting `show_similar_button: false` prevents numpy from being loaded, reducing viewer memory footprint. The similar photos feature computes CLIP embedding cosine similarity which requires numpy.
+
+### Password Protection
+
+Optional password protection for the viewer:
+
+```json
+{
+  "viewer": {
+    "password": "your-password-here"
+  }
+}
+```
+
+When set, users must authenticate before accessing the viewer.
+
+### Viewer Performance
+
+Override global `performance` settings when running the viewer. Useful for low-memory NAS deployment where scoring needs high resources but the viewer doesn't.
+
+```json
+{
+  "viewer": {
+    "performance": {
+      "mmap_size_mb": 0,
+      "cache_size_mb": 4,
+      "pool_size": 2,
+      "thumbnail_cache_size": 200,
+      "face_cache_size": 50
+    }
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mmap_size_mb` | *(global)* | SQLite mmap size override for viewer connections. `0` disables mmap. |
+| `cache_size_mb` | *(global)* | SQLite cache size override for viewer connections |
+| `pool_size` | `5` | Connection pool size (reduce for low-memory systems) |
+| `thumbnail_cache_size` | `2000` | Max entries in the in-memory thumbnail resize cache |
+| `face_cache_size` | `500` | Max entries in the in-memory face thumbnail cache |
+
+When not set, the viewer uses the global `performance` values. See [Deployment](DEPLOYMENT.md) for recommended NAS settings.
+
+---
+
+## Performance
+
+Database performance settings.
+
+```json
+{
+  "performance": {
+    "mmap_size_mb": 12288,
+    "cache_size_mb": 64
+  }
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mmap_size_mb` | `12288` | SQLite memory-mapped I/O size |
+| `cache_size_mb` | `64` | SQLite cache size |
+
+---
+
+## Share Secret
+
+Auto-generated 64-character hex string for session/sharing tokens:
+
+```json
+{
+  "share_secret": "31a1c944ea5c82b871e61e50e5920daa2d1940b126c395f519088506595fd925"
+}
+```
+
+Generated automatically on first run if not present.

@@ -1,0 +1,342 @@
+# Web Viewer
+
+Flask-based web gallery for browsing, filtering, and managing photos.
+
+## Starting the Viewer
+
+```bash
+python viewer.py
+# Open http://localhost:5000
+```
+
+## Password Protection
+
+Optional authentication via config:
+
+```json
+{
+  "viewer": {
+    "password": "your-password-here"
+  }
+}
+```
+
+When set, users must authenticate before accessing the viewer.
+
+## Filtering Options
+
+### Primary Filters
+
+| Filter | Options |
+|--------|---------|
+| **Photo Type** | Top Picks, Portraits, People in Scene, Landscapes, Architecture, Nature, Animals, Art & Statues, Black & White, Low Light, Silhouettes, Macro, Astrophotography, Street, Long Exposure, Aerial & Drone, Concerts |
+| **Quality Level** | Good (6+), Great (7+), Excellent (8+), Best (9+) |
+| **Camera & Lens** | Equipment-based filtering |
+| **Person** | Filter by recognized person |
+| **Category** | Filter by photo category |
+
+### Advanced Filters
+
+| Category | Filters |
+|----------|---------|
+| **Date** | Start and end date |
+| **Scores** | Aggregate, aesthetic, sharpness, exposure, face metrics |
+| **Metrics** | Dynamic range, contrast, noise, composition pattern, tags |
+| **Camera Settings** | ISO, f-stop, focal length ranges |
+
+### Composition Patterns
+
+Filter by SAMP-Net detected patterns:
+- rule_of_thirds, golden_ratio, center, diagonal
+- horizontal, vertical, symmetric, triangle
+- curved, radial, vanishing_point, pattern, fill_frame
+
+## Sorting
+
+22+ sortable columns grouped by category:
+
+| Group | Columns |
+|-------|---------|
+| **General** | Aggregate Score, Aesthetic, Date Taken, Star Rating |
+| **Face Metrics** | Face Quality, Eye Sharpness, Face Sharpness, Face Ratio, Face Count |
+| **Technical** | Tech Sharpness, Contrast, Noise Level |
+| **Color** | Color Score, Saturation |
+| **Exposure** | Exposure Score, Mean Luminance, Histogram Spread, Dynamic Range |
+| **Composition** | Composition Score, Power Point Score, Leading Lines, Isolation Bonus, Composition Pattern |
+
+## Gallery Features
+
+### Photo Cards
+
+- Thumbnail with score badge
+- Clickable tags for quick filtering
+- Person avatars for recognized faces
+- Category badge
+
+### Multi-Select
+
+- Click photos to select (Ctrl+click for multiple)
+- Copy paths to clipboard
+- Clear selection with Escape
+
+### Display Options
+
+- **Hide Blinks** - Filter out photos with detected blinks
+- **Best of Burst** - Show only top-scored photo from each burst
+- **Infinite Scroll** - Photos load as you scroll
+
+### Filter Chips
+
+Active filters shown as removable chips with counts at top of gallery.
+
+## Person Management
+
+### Person Filter
+
+Dropdown shows persons with face thumbnails. Click to filter gallery.
+
+### Person Gallery
+
+Click person name to view all their photos at `/person/<id>`.
+
+### Manage Persons Page
+
+Access via header button or `/manage_persons`:
+
+| Action | How To |
+|--------|--------|
+| **Merge** | Select source person, click target, confirm |
+| **Delete** | Click delete button on person card |
+| **Rename** | Click person name to edit inline |
+
+## Pairwise Comparison Mode
+
+Requires `"edition": true` in config.
+
+### Access
+
+Click "Compare" button in gallery header.
+
+### Interface
+
+- Side-by-side photo comparison
+- Selection strategies dropdown
+- Progress bar toward 50 comparisons
+- Real-time statistics (A wins, B wins, ties)
+- Category filter for focused comparison
+
+### Keyboard Shortcuts (Comparison)
+
+| Key | Action |
+|-----|--------|
+| `A` | Select left photo as winner |
+| `B` | Select right photo as winner |
+| `T` | Mark as tie |
+| `S` | Skip pair |
+| `Escape` | Close category override modal |
+
+### Selection Strategies
+
+| Strategy | Description |
+|----------|-------------|
+| `uncertainty` | Similar scores (most informative) |
+| `boundary` | 6-8 score range (ambiguous zone) |
+| `active` | Fewest comparisons (ensures coverage) |
+| `random` | Random pairs (baseline) |
+
+### Weight Preview Panel
+
+- Always visible below comparison
+- Sliders for each weight metric
+- Real-time score preview with delta
+- "Suggest Weights" learns from comparisons
+- "Reset" restores original weights
+
+### Category Override
+
+1. Click edit button on photo's category badge
+2. Select target category
+3. Click "Analyze Filter Conflicts"
+4. Review why photo doesn't match
+5. Apply override to manually assign
+
+## Keyboard Shortcuts (Gallery)
+
+| Key | Action |
+|-----|--------|
+| `Escape` | Close filter drawer or clear selections |
+| `Enter` | Submit filename search |
+
+## Configuration
+
+### Display Settings
+
+```json
+{
+  "viewer": {
+    "display": {
+      "tags_per_photo": 4,
+      "card_width_px": 168,
+      "image_width_px": 160
+    }
+  }
+}
+```
+
+### Pagination
+
+```json
+{
+  "viewer": {
+    "pagination": {
+      "default_per_page": 25
+    }
+  }
+}
+```
+
+### Dropdown Limits
+
+```json
+{
+  "viewer": {
+    "dropdowns": {
+      "max_cameras": 50,
+      "max_lenses": 50,
+      "max_persons": 50,
+      "max_tags": 20,
+      "min_photos_for_person": 1
+    }
+  }
+}
+```
+
+Set `min_photos_for_person` higher (e.g., `5` or `10`) to hide persons with few photos from the filter dropdown.
+
+### Quality Thresholds
+
+```json
+{
+  "viewer": {
+    "quality_thresholds": {
+      "good": 6,
+      "great": 7,
+      "excellent": 8,
+      "best": 9
+    }
+  }
+}
+```
+
+### Default Filters
+
+```json
+{
+  "viewer": {
+    "defaults": {
+      "hide_blinks": true,
+      "hide_bursts": true,
+      "sort": "aggregate",
+      "sort_direction": "DESC",
+      "type": ""
+    },
+    "default_category": ""
+  }
+}
+```
+
+### Top Picks Weights
+
+```json
+{
+  "viewer": {
+    "photo_types": {
+      "top_picks_min_score": 7,
+      "top_picks_min_face_ratio": 0.2,
+      "top_picks_weights": {
+        "aggregate_percent": 10,
+        "aesthetic_percent": 35,
+        "composition_percent": 25,
+        "face_quality_percent": 30
+      }
+    }
+  }
+}
+```
+
+## Performance
+
+### Large Databases (50k+ photos)
+
+Run these for optimal performance:
+
+```bash
+python database.py --migrate-tags    # 10-50x faster tag queries
+python database.py --refresh-stats   # Precompute aggregations
+python database.py --optimize        # Defragment database
+```
+
+### Statistics Cache
+
+Precomputed aggregations with 5-minute TTL:
+- Total photo counts
+- Camera/lens model counts
+- Person counts
+- Category and pattern counts
+
+Check status:
+```bash
+python database.py --stats-info
+```
+
+### Lazy Filter Loading
+
+Filter dropdowns load on-demand via API:
+- `/api/filter_options/cameras`
+- `/api/filter_options/lenses`
+- `/api/filter_options/tags`
+- `/api/filter_options/persons`
+- `/api/filter_options/patterns`
+- `/api/filter_options/categories`
+
+## API Endpoints
+
+### Gallery
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Main gallery |
+| `GET /person/<id>` | Person photo gallery |
+| `GET /manage_persons` | Person management page |
+
+### Filter Options
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/filter_options/cameras` | Camera models with counts |
+| `GET /api/filter_options/lenses` | Lens models with counts |
+| `GET /api/filter_options/tags` | Tags with counts |
+| `GET /api/filter_options/persons` | Persons with counts |
+| `GET /api/filter_options/patterns` | Composition patterns |
+| `GET /api/filter_options/categories` | Categories with counts |
+
+### Comparison Mode
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/comparison/photo_metrics` | Raw metrics for photos |
+| `GET /api/comparison/category_weights` | Category weights/filters |
+| `POST /api/comparison/preview_score` | Preview with custom weights |
+| `GET /api/comparison/learned_weights` | Suggested weights |
+| `POST /api/comparison/suggest_filters` | Analyze filter conflicts |
+| `POST /api/comparison/override_category` | Override photo category |
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Slow page load | Run `--migrate-tags` and `--optimize` |
+| Filters not showing | Check `--stats-info`, run `--refresh-stats` |
+| Person filter empty | Run `--cluster-faces-incremental` |
+| Compare button missing | Enable `"edition": true` in config |
+| Password not working | Check `viewer.password` in config |
