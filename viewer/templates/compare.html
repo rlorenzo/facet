@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Photos - Facet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .photo-card { transition: all 0.15s; cursor: pointer; }
+        .photo-card:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(147, 51, 234, 0.3); }
+        .photo-card.selected { box-shadow: 0 0 0 4px #22c55e; }
+        .keyboard-hint { font-family: monospace; background: #404040; padding: 2px 8px; border-radius: 4px; }
+        .progress-bar { transition: width 0.3s; }
+        /* Slider styling */
+        .slider-input::-webkit-slider-thumb {
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #a855f7;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -3px;
+        }
+        .slider-input::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #a855f7;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        .slider-row:hover { background: rgba(255,255,255,0.03); }
+    </style>
+</head>
+<body class="bg-neutral-950 text-white min-h-screen">
+    <header class="bg-neutral-900 border-b border-neutral-800 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-neutral-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+                <h1 class="text-xl font-bold">Compare — <span id="header-category">{{ selected_category }}</span></h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-neutral-400">
+                    <span id="comparison-count">{{ selected_category_count }}</span> / {{ min_comparisons }} comparisons
+                </div>
+                <div class="w-48 bg-neutral-800 rounded-full h-2">
+                    <div class="progress-bar bg-purple-600 h-2 rounded-full" style="width: {{ progress_pct }}%"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-6">
+        <div class="max-w-6xl mx-auto">
+            <!-- Category & Strategy Selector -->
+            <div class="mb-6 flex items-center gap-4 flex-wrap">
+                <label class="text-neutral-400 text-sm">Category:</label>
+                <select id="category-filter" class="bg-neutral-800 text-white text-sm px-3 py-2 rounded border border-neutral-700 border-purple-500">
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {{ 'selected' if cat == selected_category else '' }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <label class="text-neutral-400 text-sm ml-4">Strategy:</label>
+                <select id="strategy" class="bg-neutral-800 text-white text-sm px-3 py-2 rounded border border-neutral-700">
+                    <option value="uncertainty" {{ 'selected' if strategy == 'uncertainty' else '' }}>Uncertainty (similar scores)</option>
+                    <option value="boundary" {{ 'selected' if strategy == 'boundary' else '' }}>Boundary (6-8 range)</option>
+                    <option value="active" {{ 'selected' if strategy == 'active' else '' }}>Active Learning (low counts)</option>
+                    <option value="random" {{ 'selected' if strategy == 'random' else '' }}>Random</option>
+                </select>
+                <button id="strategy-help-btn" class="text-neutral-400 hover:text-white" title="Strategy info">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </button>
+                <span class="text-neutral-500 text-sm ml-auto">Keyboard: <span class="keyboard-hint">A</span> left wins, <span class="keyboard-hint">B</span> right wins, <span class="keyboard-hint">T</span> equal, <span class="keyboard-hint">S</span> skip</span>
+            </div>
+
+            <!-- Strategy Help Panel (hidden by default) -->
+            <div id="strategy-help-panel" class="hidden mb-6 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
+                <h4 class="font-bold text-white mb-3">Comparison Strategies</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-3 bg-neutral-900 rounded">
+                        <strong class="text-purple-400">Uncertainty (Similar Scores)</strong>
+                        <p class="text-neutral-300 mt-1">Selects pairs with nearly identical aggregate scores. Best for calibrating weights - your preference reveals which metrics matter when the algorithm can't tell the difference.</p>
+                    </div>
+                    <div class="p-3 bg-neutral-900 rounded">
+                        <strong class="text-purple-400">Boundary (Quality Threshold)</strong>
+                        <p class="text-neutral-300 mt-1">Focuses on photos scoring 5.5-8.5, the "gray zone" between good and mediocre. Helps refine the threshold between acceptable and rejects.</p>
+                    </div>
+                    <div class="p-3 bg-neutral-900 rounded">
+                        <strong class="text-purple-400">Active Learning (Underrepresented)</strong>
+                        <p class="text-neutral-300 mt-1">Prioritizes photos that have been compared fewer times. Ensures all photos contribute to the learned scores and improves overall coverage.</p>
+                    </div>
+                    <div class="p-3 bg-neutral-900 rounded">
+                        <strong class="text-purple-400">Random Sampling</strong>
+                        <p class="text-neutral-300 mt-1">Selects completely random pairs. Good for getting unbiased coverage and avoiding strategy-specific biases in your comparisons.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Photo Comparison Area -->
+            <div id="comparison-area" class="grid grid-cols-2 gap-8">
+                <div id="photo-a" class="photo-card bg-neutral-900 rounded-lg overflow-hidden border-2 border-neutral-700" onclick="selectWinner('a')">
+                    <div class="aspect-[4/3] bg-neutral-800 flex items-center justify-center">
+                        <img id="img-a" src="" class="max-w-full max-h-full object-contain hidden">
+                        <span id="loading-a" class="text-neutral-500">Loading...</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="text-lg font-bold text-purple-400">Photo A</div>
+                            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                                <span id="category-a" class="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded">-</span>
+                                <button onclick="openCategoryOverride('a')" class="text-xs text-neutral-400 hover:text-white" title="Change category">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="info-a" class="text-sm text-neutral-400"></div>
+                        {% if show_scores %}
+                        <div id="score-a" class="text-xs text-neutral-500 mt-2"></div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div id="photo-b" class="photo-card bg-neutral-900 rounded-lg overflow-hidden border-2 border-neutral-700" onclick="selectWinner('b')">
+                    <div class="aspect-[4/3] bg-neutral-800 flex items-center justify-center">
+                        <img id="img-b" src="" class="max-w-full max-h-full object-contain hidden">
+                        <span id="loading-b" class="text-neutral-500">Loading...</span>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <div class="text-lg font-bold text-purple-400">Photo B</div>
+                            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                                <span id="category-b" class="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded">-</span>
+                                <button onclick="openCategoryOverride('b')" class="text-xs text-neutral-400 hover:text-white" title="Change category">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="info-b" class="text-sm text-neutral-400"></div>
+                        {% if show_scores %}
+                        <div id="score-b" class="text-xs text-neutral-500 mt-2"></div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Override Modal -->
+            <div id="category-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center">
+                <div class="bg-neutral-900 rounded-lg p-6 max-w-xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">Change Category</h3>
+                        <button onclick="closeCategoryModal()" class="text-neutral-400 hover:text-white">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-sm text-neutral-400">Photo: <span id="modal-photo-name" class="text-white">-</span></label>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="text-sm">Current:</span>
+                            <span id="modal-current-category" class="text-purple-400 font-bold">-</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-sm text-neutral-400 block mb-2">Select new category:</label>
+                        <select id="modal-target-category" class="w-full bg-neutral-800 text-white px-3 py-2 rounded border border-neutral-700">
+                            {% for cat in categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button onclick="analyzeFilterConflicts()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded mb-4">
+                        Analyze Filter Conflicts
+                    </button>
+
+                    <!-- Filter Analysis Results -->
+                    <div id="filter-analysis" class="hidden">
+                        <div id="no-conflicts" class="hidden p-4 bg-green-900/30 border border-green-700 rounded mb-4">
+                            <div class="flex items-center gap-2 text-green-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>Photo already matches target category filters</span>
+                            </div>
+                        </div>
+
+                        <div id="conflicts-section" class="hidden mb-4">
+                            <h4 class="text-sm font-bold text-red-400 mb-2">Filter Conflicts</h4>
+                            <div id="conflicts-list" class="space-y-2 text-sm"></div>
+                        </div>
+
+                        <div id="suggestions-section" class="hidden mb-4">
+                            <h4 class="text-sm font-bold text-yellow-400 mb-2">Suggested Filter Changes</h4>
+                            <div id="suggestions-list" class="space-y-2 text-sm"></div>
+                        </div>
+
+                        <div id="photo-values-section" class="mb-4">
+                            <h4 class="text-sm font-bold text-neutral-400 mb-2">Photo Values</h4>
+                            <div id="photo-values-grid" class="grid grid-cols-2 gap-2 text-xs bg-neutral-800 p-3 rounded"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="applyOverride()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded">
+                            Apply Override
+                        </button>
+                        <button onclick="closeCategoryModal()" class="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-6 flex justify-center gap-4">
+                <button onclick="selectWinner('tie')" class="bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-2 rounded" title="Both photos are equally good (or equally bad)">
+                    Equal Quality (T)
+                </button>
+                <button onclick="selectWinner('skip')" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-6 py-2 rounded" title="Can't decide or photos are too different to compare">
+                    Can't Compare (S)
+                </button>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="mt-4 flex justify-center gap-4">
+                <button id="suggest-weights"
+                        class="bg-green-700 hover:bg-green-600 text-white px-6 py-2 rounded"
+                        title="Suggest optimal weights based on your comparisons">
+                    Suggest Weights
+                </button>
+                <button id="apply-weights"
+                        class="bg-purple-700 hover:bg-purple-600 text-white px-6 py-2 rounded"
+                        title="Save suggested weights to config file">
+                    Apply Config
+                </button>
+                <button id="recalculate-btn" onclick="recalculateScores()"
+                        class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-2 rounded"
+                        title="Recalculate all categories and aggregate scores using current config">
+                    Recalculate
+                </button>
+                <button id="reset-weights"
+                        class="bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-2 rounded"
+                        title="Reset weight sliders to original values">
+                    Reset Weights
+                </button>
+                <button onclick="resetComparisons()"
+                        class="bg-red-700 hover:bg-red-600 text-white px-6 py-2 rounded"
+                        title="Clear all comparison data and start fresh">
+                    Reset All
+                </button>
+            </div>
+
+            <!-- Session Stats (Compact) -->
+            <div class="mt-8 p-3 bg-neutral-900 rounded-lg">
+                <div class="flex items-center gap-6 text-sm">
+                    <button id="stats-toggle" onclick="toggleStats()" class="text-neutral-400 hover:text-white flex items-center gap-1">
+                        <svg id="stats-chevron" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span class="font-bold">Stats</span>
+                    </button>
+                    <span class="text-neutral-400">Total: <span id="stat-total" class="text-white font-bold">{{ stats.total_comparisons }}</span></span>
+                    <span class="text-neutral-400">A: <span id="stat-a" class="text-purple-400 font-bold">{{ stats.winner_breakdown.get('a', 0) }}</span></span>
+                    <span class="text-neutral-400">B: <span id="stat-b" class="text-purple-400 font-bold">{{ stats.winner_breakdown.get('b', 0) }}</span></span>
+                    <span class="text-neutral-400">Ties: <span id="stat-tie" class="text-neutral-300 font-bold">{{ stats.winner_breakdown.get('tie', 0) }}</span></span>
+                </div>
+                <!-- Expanded stats (hidden by default) -->
+                <div id="stats-expanded" class="hidden mt-3 pt-3 border-t border-neutral-800">
+                    <div class="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                            <div class="text-neutral-500">Total Comparisons</div>
+                            <div id="stat-total-expanded" class="text-xl font-bold">{{ stats.total_comparisons }}</div>
+                        </div>
+                        <div>
+                            <div class="text-neutral-500">A Wins</div>
+                            <div id="stat-a-expanded" class="text-xl font-bold text-purple-400">{{ stats.winner_breakdown.get('a', 0) }}</div>
+                        </div>
+                        <div>
+                            <div class="text-neutral-500">B Wins</div>
+                            <div id="stat-b-expanded" class="text-xl font-bold text-purple-400">{{ stats.winner_breakdown.get('b', 0) }}</div>
+                        </div>
+                        <div>
+                            <div class="text-neutral-500">Ties</div>
+                            <div id="stat-tie-expanded" class="text-xl font-bold text-neutral-400">{{ stats.winner_breakdown.get('tie', 0) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weight Preview Panel (always visible) -->
+            <div id="weight-panel" class="mt-6 p-4 bg-neutral-900 rounded-lg">
+                <div class="flex items-center gap-2 mb-4">
+                    <h3 class="text-lg font-bold">Weight Preview</h3>
+                    <button id="weight-help-btn" class="text-neutral-400 hover:text-white" title="How it works">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- How It Works (hidden by default) -->
+                <div id="weight-help-panel" class="hidden mb-4 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
+                    <h4 class="font-bold text-white mb-3">How Weight Learning Works</h4>
+                    <div class="space-y-3 text-neutral-300">
+                        <div>
+                            <strong class="text-purple-400">1. Your comparisons teach the system</strong>
+                            <p class="mt-1">Each time you pick a winner, the system learns your preferences using the Bradley-Terry model, which calculates a "true quality score" for each photo based on win/loss patterns.</p>
+                        </div>
+                        <div>
+                            <strong class="text-purple-400">2. Suggest Weights optimizes the weight combination</strong>
+                            <p class="mt-1">The algorithm finds the best <em>ratio</em> of weights that makes the combined score match your preferences. It uses mathematical optimization (SLSQP) to maximize how well the weighted sum predicts your choices.</p>
+                        </div>
+                        <div>
+                            <strong class="text-purple-400">3. Rank correlation measures accuracy</strong>
+                            <p class="mt-1">
+                                <span class="text-green-400">Positive correlation (+0.5 to +1.0)</span> = weights rank photos similar to your preferences<br>
+                                <span class="text-yellow-400">Near zero (-0.2 to +0.2)</span> = not enough data or mixed signals<br>
+                                <span class="text-red-400">Negative correlation</span> = weights rank opposite to your preferences
+                            </p>
+                        </div>
+                        <div>
+                            <strong class="text-purple-400">4. Apply to save, Recalculate to update</strong>
+                            <p class="mt-1">Click "Apply to Config" to save weights, then "Recalculate Scores" to update all photo scores in the database.</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-2 bg-neutral-900 rounded text-xs text-neutral-400">
+                        <strong>Tip:</strong> Do 30+ comparisons per category for suggestions (50+ recommended for accuracy). Mix strategies for best coverage. Ties are now included in optimization.
+                    </div>
+                </div>
+
+                <!-- Suggestion Info (hidden by default) -->
+                <div id="suggestion-info" class="mb-4 p-3 bg-neutral-800 rounded hidden">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <span class="text-sm text-neutral-400">
+                            Learned from <span id="suggestion-comparisons">0</span> comparisons
+                            <span id="suggestion-ties" class="text-neutral-500">(incl. <span id="suggestion-ties-count">0</span> ties)</span>
+                        </span>
+                        <span class="text-sm">
+                            Prediction accuracy: <span id="suggestion-acc-before" class="text-neutral-400">0%</span>
+                            &rarr; <span id="suggestion-acc-after" class="text-green-400 font-bold">0%</span>
+                            (<span id="suggestion-improvement" class="font-bold">+0%</span>)
+                        </span>
+                    </div>
+                    <div id="suggestion-mispredicted" class="mt-2 text-xs text-neutral-500 hidden">
+                        <span id="suggestion-mispredicted-count">0</span> comparisons predicted incorrectly
+                    </div>
+                    <div id="suggestion-warning" class="mt-2 text-xs text-yellow-500 hidden">
+                        Current weights already achieve good accuracy - changes not recommended.
+                    </div>
+                    <!-- Weight changes delta -->
+                    <div id="suggestion-deltas" class="mt-3 pt-3 border-t border-neutral-700">
+                        <div class="text-xs text-neutral-400 mb-2">Weight changes:</div>
+                        <div id="suggestion-deltas-list" class="flex flex-wrap gap-2 text-xs"></div>
+                    </div>
+                </div>
+                <!-- Unified Score Preview & Weight Grid -->
+                <div class="bg-neutral-800 p-4 rounded">
+                    <!-- Compact Score Preview Header -->
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold">Score Preview</h4>
+                        <span class="text-sm">Category: <span id="category-name" class="text-purple-400">-</span></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm mb-4 pb-3 border-b border-neutral-700">
+                        <div class="flex items-center gap-2">
+                            <span class="text-neutral-400">Photo A:</span>
+                            <span id="preview-a-current" class="text-purple-400">-</span>
+                            <span class="text-neutral-500">&rarr;</span>
+                            <span id="preview-a-new" class="text-green-400">-</span>
+                            <span id="preview-a-delta" class="text-xs">(Δ-)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-neutral-400">Photo B:</span>
+                            <span id="preview-b-current" class="text-purple-400">-</span>
+                            <span class="text-neutral-500">&rarr;</span>
+                            <span id="preview-b-new" class="text-green-400">-</span>
+                            <span id="preview-b-delta" class="text-xs">(Δ-)</span>
+                        </div>
+                    </div>
+                    <!-- Column headers for unified grid -->
+                    <div class="flex items-center gap-2 text-xs text-neutral-500 mb-2 px-1">
+                        <span class="w-24">Property</span>
+                        <span class="w-12 text-right">A</span>
+                        <span class="w-12 text-right">B</span>
+                        <span class="flex-1 text-center">Weight</span>
+                        <span class="w-8 text-right">%</span>
+                        <span class="w-6"></span>
+                        <span class="w-12"></span>
+                    </div>
+                    <!-- Unified Property Grid -->
+                    <div id="weight-sliders" class="space-y-1 text-sm max-h-[32rem] overflow-y-auto pr-2">
+                        <!-- Sliders with A/B values inserted dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentPair = null;
+        const showScores = {{ 'true' if show_scores else 'false' }};
+
+        async function loadNextPair() {
+            const strategy = document.getElementById('strategy').value;
+            const category = document.getElementById('category-filter').value;
+            document.getElementById('loading-a').classList.remove('hidden');
+            document.getElementById('loading-b').classList.remove('hidden');
+            document.getElementById('img-a').classList.add('hidden');
+            document.getElementById('img-b').classList.add('hidden');
+
+            try {
+                let url = `/api/comparison/next_pair?strategy=${strategy}`;
+                if (category) {
+                    url += `&category=${encodeURIComponent(category)}`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                currentPair = data;
+
+                // Load thumbnails (embedded in database for fast loading)
+                document.getElementById('img-a').src = `/thumbnail?path=${encodeURIComponent(data.a)}`;
+                document.getElementById('img-b').src = `/thumbnail?path=${encodeURIComponent(data.b)}`;
+
+                document.getElementById('img-a').onload = () => {
+                    document.getElementById('loading-a').classList.add('hidden');
+                    document.getElementById('img-a').classList.remove('hidden');
+                };
+                document.getElementById('img-a').onerror = () => {
+                    document.getElementById('loading-a').textContent = 'Failed to load';
+                    console.error('Failed to load thumbnail for:', data.a);
+                };
+                document.getElementById('img-b').onload = () => {
+                    document.getElementById('loading-b').classList.add('hidden');
+                    document.getElementById('img-b').classList.remove('hidden');
+                };
+                document.getElementById('img-b').onerror = () => {
+                    document.getElementById('loading-b').textContent = 'Failed to load';
+                    console.error('Failed to load thumbnail for:', data.b);
+                };
+
+                // Show file info
+                document.getElementById('info-a').textContent = data.a.split('/').pop();
+                document.getElementById('info-b').textContent = data.b.split('/').pop();
+
+                if (showScores) {
+                    document.getElementById('score-a').textContent = `Score: ${data.score_a?.toFixed(2) || 'N/A'}`;
+                    document.getElementById('score-b').textContent = `Score: ${data.score_b?.toFixed(2) || 'N/A'}`;
+                }
+
+                // Reset selection state
+                document.getElementById('photo-a').classList.remove('selected');
+                document.getElementById('photo-b').classList.remove('selected');
+            } catch (err) {
+                console.error('Error loading pair:', err);
+                alert('Failed to load next pair');
+            }
+        }
+
+        async function selectWinner(winner) {
+            if (!currentPair) return;
+
+            // Visual feedback
+            if (winner === 'a') {
+                document.getElementById('photo-a').classList.add('selected');
+            } else if (winner === 'b') {
+                document.getElementById('photo-b').classList.add('selected');
+            }
+
+            try {
+                const category = document.getElementById('category-filter').value;
+                const response = await fetch('/api/comparison/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        photo_a: currentPair.a,
+                        photo_b: currentPair.b,
+                        winner: winner,
+                        category: category || null
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update stats (compact and expanded)
+                    updateAllStats(data.stats);
+
+                    // Update header count and progress using per-category count
+                    const catCount = getCategoryCount(data.stats, category);
+                    document.getElementById('comparison-count').textContent = catCount;
+                    const pct = Math.min(100, (catCount / {{ min_comparisons }}) * 100);
+                    document.querySelector('.progress-bar').style.width = pct + '%';
+
+                    // Load next pair
+                    setTimeout(loadNextPair, 300);
+                }
+            } catch (err) {
+                console.error('Error submitting:', err);
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return; // Don't trigger on input fields
+            if (e.key.toLowerCase() === 'a') selectWinner('a');
+            else if (e.key.toLowerCase() === 'b') selectWinner('b');
+            else if (e.key.toLowerCase() === 't') selectWinner('tie');
+            else if (e.key.toLowerCase() === 's') selectWinner('skip');
+        });
+
+        // Toggle stats expansion
+        function toggleStats() {
+            const expanded = document.getElementById('stats-expanded');
+            const chevron = document.getElementById('stats-chevron');
+            expanded.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-90');
+        }
+
+        // Extract per-category count from stats.category_breakdown
+        function getCategoryCount(stats, category) {
+            if (!stats.category_breakdown) return 0;
+            const entry = stats.category_breakdown.find(e => e.category === category);
+            return entry ? entry.count : 0;
+        }
+
+        // Cache latest stats for category switches
+        let latestStats = {{ stats | tojson }};
+
+        // Update all stat displays (compact + expanded)
+        function updateAllStats(stats) {
+            latestStats = stats;
+            document.getElementById('stat-total').textContent = stats.total_comparisons;
+            document.getElementById('stat-a').textContent = stats.winner_breakdown.a || 0;
+            document.getElementById('stat-b').textContent = stats.winner_breakdown.b || 0;
+            document.getElementById('stat-tie').textContent = stats.winner_breakdown.tie || 0;
+            // Also update expanded versions
+            const expandedTotal = document.getElementById('stat-total-expanded');
+            if (expandedTotal) expandedTotal.textContent = stats.total_comparisons;
+            const expandedA = document.getElementById('stat-a-expanded');
+            if (expandedA) expandedA.textContent = stats.winner_breakdown.a || 0;
+            const expandedB = document.getElementById('stat-b-expanded');
+            if (expandedB) expandedB.textContent = stats.winner_breakdown.b || 0;
+            const expandedTie = document.getElementById('stat-tie-expanded');
+            if (expandedTie) expandedTie.textContent = stats.winner_breakdown.tie || 0;
+        }
+
+        // Reset all comparisons
+        async function resetComparisons() {
+            const totalComparisons = document.getElementById('stat-total').textContent;
+            const confirmMsg = `RESET ALL COMPARISON DATA
+
+This will permanently delete:
+- ${totalComparisons} pairwise comparisons
+- All learned weight suggestions
+- All session statistics
+
+This cannot be undone. Continue?`;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            try {
+                const response = await fetch('/api/comparison/reset', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    // Reset UI
+                    updateAllStats({total_comparisons: 0, winner_breakdown: {a: 0, b: 0, tie: 0}, category_breakdown: []});
+                    document.getElementById('comparison-count').textContent = '0';
+                    document.querySelector('.progress-bar').style.width = '0%';
+                    document.getElementById('suggestion-info').classList.add('hidden');
+                    alert('Comparison data has been reset.');
+                    loadNextPair();
+                } else {
+                    alert('Error resetting data: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error resetting comparisons:', err);
+                alert('Error resetting comparison data');
+            }
+        }
+
+        // Recalculate all scores
+        async function recalculateScores() {
+            const category = document.getElementById('category-filter').value;
+            const confirmMsg = `RECALCULATE ALL PHOTO SCORES
+
+This will:
+- Re-determine categories for all photos based on config filters
+- Recalculate aggregate scores using current category weights
+- Update the database with new scores
+
+Category weights from: ${category || 'current config'}
+
+This may take several minutes for large databases. Continue?`;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            const btn = document.getElementById('recalculate-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Recalculating...';
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const response = await fetch('/api/recalculate', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Recalculation complete! Categories and scores have been updated.');
+                    // Reload the current pair to show updated scores
+                    loadNextPair();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error recalculating:', err);
+                alert('Error recalculating scores. Check console for details.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Strategy change
+        document.getElementById('strategy').addEventListener('change', loadNextPair);
+
+        // Strategy help toggle
+        document.getElementById('strategy-help-btn').addEventListener('click', () => {
+            const panel = document.getElementById('strategy-help-panel');
+            panel.classList.toggle('hidden');
+        });
+
+        // Weight help toggle
+        document.getElementById('weight-help-btn').addEventListener('click', () => {
+            const panel = document.getElementById('weight-help-panel');
+            panel.classList.toggle('hidden');
+        });
+
+        // Category filter change
+        document.getElementById('category-filter').addEventListener('change', () => {
+            const category = document.getElementById('category-filter').value;
+            // Update header with new category name
+            document.getElementById('header-category').textContent = category;
+            // Update count and progress for selected category
+            const catCount = getCategoryCount(latestStats, category);
+            document.getElementById('comparison-count').textContent = catCount;
+            const pct = Math.min(100, (catCount / {{ min_comparisons }}) * 100);
+            document.querySelector('.progress-bar').style.width = pct + '%';
+
+            loadNextPair();
+            if (weightPanelVisible) loadCategoryWeights();
+        });
+
+        // Weight preview panel state (always visible now)
+        let weightPanelVisible = true;
+        let currentWeights = {};
+        let originalWeights = {};
+        let photoMetrics = {};
+
+        // Reset weights button
+        document.getElementById('reset-weights').addEventListener('click', () => {
+            currentWeights = {...originalWeights};
+            renderWeightSliders();
+            updateScorePreview();
+            document.getElementById('suggestion-info').classList.add('hidden');
+        });
+
+        // Apply weights to config button
+        document.getElementById('apply-weights').addEventListener('click', async () => {
+            const category = document.getElementById('category-filter').value;
+            if (!category) {
+                alert('Please select a category first to apply weights.');
+                return;
+            }
+
+            // Check if weights have changed
+            const hasChanges = Object.keys(currentWeights).some(k => currentWeights[k] !== originalWeights[k]);
+            if (!hasChanges) {
+                alert('No weight changes to apply.');
+                return;
+            }
+
+            // Build weight changes summary
+            const changes = [];
+            for (const key of Object.keys(currentWeights)) {
+                const oldVal = originalWeights[key] || 0;
+                const newVal = currentWeights[key] || 0;
+                if (Math.abs(newVal - oldVal) >= 1) {
+                    const name = key.replace(/_percent$/, '').replace(/_/g, ' ');
+                    changes.push(`  ${name}: ${Math.round(oldVal)}% -> ${Math.round(newVal)}%`);
+                }
+            }
+
+            const confirmMsg = `APPLY WEIGHTS TO CONFIG
+
+Category: ${category}
+
+Weight changes:
+${changes.join('\\n')}
+
+This will:
+- Update scoring_config.json with new weights
+- Create a backup of the current config
+- NOT recalculate existing scores (use "Recalculate Scores" after)
+
+Save these weights?`;
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            const btn = document.getElementById('apply-weights');
+            const originalText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/config/update_weights', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        category: category,
+                        weights: currentWeights,
+                        recalculate: false  // User can manually recalculate
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    originalWeights = {...currentWeights};
+                    alert(`Weights saved for "${category}"!\\n\\nBackup created: ${data.backup}\\n\\nClick "Recalculate Scores" to apply to all photos.`);
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error saving weights:', err);
+                alert('Error saving weights');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Suggest weights button
+        document.getElementById('suggest-weights').addEventListener('click', async () => {
+            const category = document.getElementById('category-filter').value || null;
+            const btn = document.getElementById('suggest-weights');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            try {
+                const url = category
+                    ? `/api/comparison/learned_weights?category=${category}`
+                    : '/api/comparison/learned_weights';
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.available) {
+                    // Store old weights before applying suggestions
+                    const oldWeights = {...currentWeights};
+
+                    // Merge suggested weights with original (keeps any weights not in optimizer)
+                    currentWeights = {...originalWeights, ...data.suggested_weights};
+                    renderWeightSliders();
+                    updateScorePreview();
+
+                    // Show suggestion info with accuracy metrics
+                    document.getElementById('suggestion-comparisons').textContent = data.comparisons_used;
+
+                    // Show ties count if available
+                    const tiesEl = document.getElementById('suggestion-ties');
+                    const tiesCountEl = document.getElementById('suggestion-ties-count');
+                    if (data.ties_included && data.ties_included > 0) {
+                        tiesCountEl.textContent = data.ties_included;
+                        tiesEl.classList.remove('hidden');
+                    } else {
+                        tiesEl.classList.add('hidden');
+                    }
+
+                    // Show accuracy before/after
+                    document.getElementById('suggestion-acc-before').textContent = (data.accuracy_before || 0).toFixed(1) + '%';
+                    document.getElementById('suggestion-acc-after').textContent = (data.accuracy_after || 0).toFixed(1) + '%';
+
+                    // Show improvement
+                    const improvement = data.improvement || 0;
+                    const improvementEl = document.getElementById('suggestion-improvement');
+                    improvementEl.textContent = (improvement >= 0 ? '+' : '') + improvement.toFixed(1) + '%';
+                    improvementEl.className = improvement >= 0 ? 'font-bold text-green-400' : 'font-bold text-red-400';
+
+                    // Show mispredicted count if any
+                    const mispredEl = document.getElementById('suggestion-mispredicted');
+                    const mispredCountEl = document.getElementById('suggestion-mispredicted-count');
+                    if (data.mispredicted_count && data.mispredicted_count > 0) {
+                        mispredCountEl.textContent = data.mispredicted_count;
+                        mispredEl.classList.remove('hidden');
+                    } else {
+                        mispredEl.classList.add('hidden');
+                    }
+
+                    // Show warning if changes not recommended
+                    const warningEl = document.getElementById('suggestion-warning');
+                    if (data.suggest_changes === false) {
+                        warningEl.classList.remove('hidden');
+                    } else {
+                        warningEl.classList.add('hidden');
+                    }
+
+                    // Build weight deltas display
+                    // Note: weights are already in percentage format (0-100)
+                    const deltasList = document.getElementById('suggestion-deltas-list');
+                    deltasList.innerHTML = '';
+                    const allKeys = new Set([...Object.keys(oldWeights), ...Object.keys(currentWeights)]);
+                    const deltas = [];
+                    for (const key of allKeys) {
+                        const oldVal = oldWeights[key] || 0;
+                        const newVal = currentWeights[key] || 0;
+                        const delta = newVal - oldVal;
+                        if (Math.abs(delta) >= 1) {  // Only show changes >= 1%
+                            deltas.push({ key, oldVal, newVal, delta });
+                        }
+                    }
+                    // Sort by absolute delta descending
+                    deltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
+                    if (deltas.length === 0) {
+                        deltasList.innerHTML = '<span class="text-neutral-500">No significant changes</span>';
+                    } else {
+                        for (const { key, oldVal, newVal, delta } of deltas) {
+                            const colorClass = delta > 0 ? 'text-green-400' : 'text-red-400';
+                            const arrow = delta > 0 ? '↑' : '↓';
+                            // Clean up key name: remove _percent suffix and replace underscores
+                            const displayName = key.replace(/_percent$/, '').replace(/_/g, ' ');
+                            const chip = document.createElement('span');
+                            chip.className = 'inline-flex items-center gap-1 px-2 py-1 bg-neutral-700 rounded';
+                            chip.innerHTML = `<span class="text-neutral-300">${displayName}</span>` +
+                                `<span class="text-neutral-500">${Math.round(oldVal)}%</span>` +
+                                `<span class="text-neutral-500">&rarr;</span>` +
+                                `<span class="${colorClass} font-medium">${Math.round(newVal)}%</span>` +
+                                `<span class="${colorClass}">${arrow}${Math.abs(Math.round(delta))}</span>`;
+                            deltasList.appendChild(chip);
+                        }
+                    }
+
+                    document.getElementById('suggestion-info').classList.remove('hidden');
+                } else {
+                    alert(data.message || 'Could not generate suggestions');
+                    document.getElementById('suggestion-info').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Error fetching suggestions:', err);
+                alert('Error fetching weight suggestions');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Suggest Weights';
+            }
+        });
+
+        // Load category weights from API
+        async function loadCategoryWeights() {
+            const category = document.getElementById('category-filter').value || 'portrait';
+            try {
+                const response = await fetch(`/api/comparison/category_weights?category=${category}`);
+                const data = await response.json();
+                if (data.weights) {
+                    originalWeights = {...data.weights};
+                    currentWeights = {...data.weights};
+                    document.getElementById('category-name').textContent = category;
+                    renderWeightSliders();
+                }
+            } catch (err) {
+                console.error('Error loading weights:', err);
+            }
+        }
+
+        // Render weight sliders - shows ALL scoring components with A/B values inline
+        function renderWeightSliders() {
+            const container = document.getElementById('weight-sliders');
+            container.innerHTML = '';
+
+            // Get photo metrics for A/B values
+            const metricsA = currentPair ? (photoMetrics[currentPair.a] || {}) : {};
+            const metricsB = currentPair ? (photoMetrics[currentPair.b] || {}) : {};
+
+            // All possible scoring components with labels and metric keys (grouped)
+            const allComponents = [
+                // Primary quality metrics
+                { key: 'aesthetic_percent', label: 'Aesthetic', metricKey: 'aesthetic', group: 'Quality' },
+                { key: 'quality_percent', label: 'Quality Score', metricKey: 'quality_score', group: 'Quality' },
+                { key: 'face_quality_percent', label: 'Face Quality', metricKey: 'face_quality', group: 'Quality' },
+                { key: 'face_sharpness_percent', label: 'Face Sharpness', metricKey: 'face_sharpness', group: 'Quality' },
+                { key: 'eye_sharpness_percent', label: 'Eye Sharpness', metricKey: 'eye_sharpness', group: 'Quality' },
+                { key: 'tech_sharpness_percent', label: 'Tech Sharpness', metricKey: 'tech_sharpness', group: 'Quality' },
+                // Composition metrics
+                { key: 'composition_percent', label: 'Composition', metricKey: 'comp_score', group: 'Composition' },
+                { key: 'power_point_percent', label: 'Power Points', metricKey: 'power_point_score', group: 'Composition' },
+                { key: 'leading_lines_percent', label: 'Leading Lines', metricKey: 'leading_lines_score', group: 'Composition' },
+                // Technical metrics
+                { key: 'exposure_percent', label: 'Exposure', metricKey: 'exposure_score', group: 'Technical' },
+                { key: 'color_percent', label: 'Color', metricKey: 'color_score', group: 'Technical' },
+                { key: 'contrast_percent', label: 'Contrast', metricKey: 'contrast_score', group: 'Technical' },
+                { key: 'dynamic_range_percent', label: 'Dynamic Range', metricKey: 'dynamic_range_stops', group: 'Technical' },
+                { key: 'saturation_percent', label: 'Saturation', metricKey: 'mean_saturation', group: 'Technical' },
+                { key: 'noise_percent', label: 'Noise (inv)', metricKey: 'noise_sigma', group: 'Technical', inverse: true },
+                // Bonuses
+                { key: 'isolation_percent', label: 'Isolation', metricKey: 'isolation_bonus', group: 'Bonus' },
+            ];
+
+            // Group components by category
+            const groups = {};
+            for (const comp of allComponents) {
+                if (!groups[comp.group]) {
+                    groups[comp.group] = [];
+                }
+                groups[comp.group].push(comp);
+            }
+
+            // Helper to get color class for A/B value comparison
+            function getCompareClass(valA, valB, inverse = false) {
+                if (valA == null || valB == null || valA === valB) return ['text-neutral-300', 'text-neutral-300'];
+                if (inverse) {
+                    // Lower is better (e.g., noise)
+                    return [
+                        valA < valB ? 'text-green-400' : 'text-red-400',
+                        valB < valA ? 'text-green-400' : 'text-red-400'
+                    ];
+                } else {
+                    // Higher is better
+                    return [
+                        valA > valB ? 'text-green-400' : 'text-red-400',
+                        valB > valA ? 'text-green-400' : 'text-red-400'
+                    ];
+                }
+            }
+
+            // Render each group with header
+            for (const [groupName, components] of Object.entries(groups)) {
+                // Add group header
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="text-xs text-purple-400 uppercase tracking-wide mt-3 mb-1 first:mt-0">${groupName}</div>
+                `);
+
+                for (const {key, label, metricKey, inverse} of components) {
+                    // Default to 0 if not in currentWeights
+                    const value = currentWeights[key] || 0;
+                    const origValue = originalWeights[key] || 0;
+                    // Ensure currentWeights has all keys for preview calculation
+                    if (!(key in currentWeights)) {
+                        currentWeights[key] = 0;
+                    }
+                    const isZero = value === 0;
+                    const delta = value - origValue;
+                    const deltaClass = delta > 0 ? 'text-green-400' : (delta < 0 ? 'text-red-400' : 'text-neutral-500');
+                    const deltaText = delta !== 0 ? (delta > 0 ? '+' + delta : delta) : '';
+                    const origMarkerPos = origValue + '%';
+
+                    // Get A/B metric values
+                    const valA = metricsA[metricKey];
+                    const valB = metricsB[metricKey];
+                    const fmtA = valA != null ? (typeof valA === 'number' ? valA.toFixed(2) : valA) : '-';
+                    const fmtB = valB != null ? (typeof valB === 'number' ? valB.toFixed(2) : valB) : '-';
+                    const [classA, classB] = getCompareClass(valA, valB, inverse);
+
+                    const html = `
+                        <div class="flex items-center gap-2 slider-row ${isZero && origValue === 0 ? 'opacity-50' : ''}" data-key="${key}">
+                            <span class="w-24 text-neutral-400 text-xs truncate" title="${label}">${label}</span>
+                            <span class="w-12 text-right text-xs font-mono ${classA}" data-metric-a="${metricKey}">${fmtA}</span>
+                            <span class="w-12 text-right text-xs font-mono ${classB}" data-metric-b="${metricKey}">${fmtB}</span>
+                            <div class="flex-1 relative">
+                                <input type="range" min="0" max="100" value="${value}"
+                                       class="w-full h-2 bg-neutral-700 rounded appearance-none cursor-pointer slider-input"
+                                       data-key="${key}" data-orig="${origValue}" oninput="onWeightChange(this)">
+                                <div class="absolute top-0 h-2 w-0.5 bg-yellow-500 pointer-events-none" style="left: ${origMarkerPos}; transform: translateX(-50%);" title="Original: ${origValue}%"></div>
+                            </div>
+                            <span class="w-8 text-right text-xs font-mono" id="val-${key}">${value}</span>
+                            <span class="w-6 text-right text-xs font-mono ${deltaClass}" id="delta-${key}">${deltaText}</span>
+                            <div class="flex gap-0.5">
+                                <button onclick="adjustWeight('${key}', -5)" class="w-5 h-5 text-xs bg-neutral-700 hover:bg-neutral-600 rounded" title="-5%">-</button>
+                                <button onclick="adjustWeight('${key}', 5)" class="w-5 h-5 text-xs bg-neutral-700 hover:bg-neutral-600 rounded" title="+5%">+</button>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                }
+            }
+        }
+
+        // Handle weight slider change
+        function onWeightChange(slider) {
+            const key = slider.dataset.key;
+            const value = parseInt(slider.value);
+            const origValue = parseInt(slider.dataset.orig) || 0;
+            currentWeights[key] = value;
+
+            const valEl = document.getElementById(`val-${key}`);
+            valEl.textContent = value;
+
+            // Update delta display
+            const delta = value - origValue;
+            const deltaEl = document.getElementById(`delta-${key}`);
+            if (deltaEl) {
+                deltaEl.textContent = delta !== 0 ? (delta > 0 ? '+' + delta : delta) : '';
+                deltaEl.className = 'w-6 text-right text-xs font-mono ' +
+                    (delta > 0 ? 'text-green-400' : (delta < 0 ? 'text-red-400' : 'text-neutral-500'));
+            }
+
+            // Update row styling
+            const row = slider.closest('.slider-row');
+            if (row) {
+                if (value === 0 && origValue === 0) {
+                    row.classList.add('opacity-50');
+                } else {
+                    row.classList.remove('opacity-50');
+                }
+            }
+
+            debounce(updateScorePreview, 100)();
+        }
+
+        // Adjust weight by step amount
+        function adjustWeight(key, step) {
+            const slider = document.querySelector(`input[data-key="${key}"]`);
+            if (!slider) return;
+            const newValue = Math.max(0, Math.min(100, parseInt(slider.value) + step));
+            slider.value = newValue;
+            onWeightChange(slider);
+        }
+
+        // Debounce helper
+        let debounceTimer;
+        function debounce(fn, delay) {
+            return function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(fn, delay);
+            };
+        }
+
+        // Load photo metrics
+        async function loadPhotoMetrics() {
+            if (!currentPair) return;
+            try {
+                const paths = encodeURIComponent(`${currentPair.a},${currentPair.b}`);
+                const response = await fetch(`/api/comparison/photo_metrics?paths=${paths}`);
+                photoMetrics = await response.json();
+                updateScorePreview();
+            } catch (err) {
+                console.error('Error loading metrics:', err);
+            }
+        }
+
+        // Update score preview (client-side calculation)
+        async function updateScorePreview() {
+            if (!currentPair || Object.keys(photoMetrics).length === 0) return;
+
+            const category = document.getElementById('category-filter').value || 'portrait';
+
+            // Preview for Photo A
+            try {
+                const respA = await fetch('/api/comparison/preview_score', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: currentPair.a, weights: currentWeights})
+                });
+                const dataA = await respA.json();
+                document.getElementById('preview-a-current').textContent = (photoMetrics[currentPair.a]?.aggregate || 0).toFixed(2);
+                document.getElementById('preview-a-new').textContent = dataA.preview_score?.toFixed(2) || '-';
+                const deltaA = dataA.delta || 0;
+                document.getElementById('preview-a-delta').textContent = (deltaA >= 0 ? '+' : '') + deltaA.toFixed(2);
+                document.getElementById('preview-a-delta').className = deltaA >= 0 ? 'text-green-400' : 'text-red-400';
+            } catch (err) {
+                console.error('Error previewing A:', err);
+            }
+
+            // Preview for Photo B
+            try {
+                const respB = await fetch('/api/comparison/preview_score', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: currentPair.b, weights: currentWeights})
+                });
+                const dataB = await respB.json();
+                document.getElementById('preview-b-current').textContent = (photoMetrics[currentPair.b]?.aggregate || 0).toFixed(2);
+                document.getElementById('preview-b-new').textContent = dataB.preview_score?.toFixed(2) || '-';
+                const deltaB = dataB.delta || 0;
+                document.getElementById('preview-b-delta').textContent = (deltaB >= 0 ? '+' : '') + deltaB.toFixed(2);
+                document.getElementById('preview-b-delta').className = deltaB >= 0 ? 'text-green-400' : 'text-red-400';
+            } catch (err) {
+                console.error('Error previewing B:', err);
+            }
+
+            // Re-render sliders to update A/B values with new metrics
+            renderWeightSliders();
+        }
+
+        // Reload metrics when pair changes
+        const originalLoadNextPair = loadNextPair;
+        loadNextPair = async function() {
+            await originalLoadNextPair();
+            // Always load metrics to display category badges
+            if (currentPair) {
+                await loadPhotoMetrics();
+                // Update category display after metrics load
+                document.getElementById('category-a').textContent = photoMetrics[currentPair.a]?.category || '-';
+                document.getElementById('category-b').textContent = photoMetrics[currentPair.b]?.category || '-';
+            }
+        };
+
+        // Category Override Modal State
+        let currentOverridePhoto = null;  // 'a' or 'b'
+
+        function openCategoryOverride(photo) {
+            currentOverridePhoto = photo;
+            const path = photo === 'a' ? currentPair.a : currentPair.b;
+            const metrics = photoMetrics[path] || {};
+
+            document.getElementById('modal-photo-name').textContent = path.split('/').pop();
+            document.getElementById('modal-current-category').textContent = metrics.category || '-';
+            document.getElementById('modal-target-category').value = metrics.category || 'others';
+
+            // Reset analysis state
+            document.getElementById('filter-analysis').classList.add('hidden');
+            document.getElementById('no-conflicts').classList.add('hidden');
+            document.getElementById('conflicts-section').classList.add('hidden');
+            document.getElementById('suggestions-section').classList.add('hidden');
+
+            document.getElementById('category-modal').classList.remove('hidden');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('category-modal').classList.add('hidden');
+            currentOverridePhoto = null;
+        }
+
+        async function analyzeFilterConflicts() {
+            if (!currentOverridePhoto || !currentPair) return;
+
+            const path = currentOverridePhoto === 'a' ? currentPair.a : currentPair.b;
+            const targetCategory = document.getElementById('modal-target-category').value;
+
+            try {
+                const response = await fetch('/api/comparison/suggest_filters', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: path, target_category: targetCategory})
+                });
+                const data = await response.json();
+
+                // Show analysis section
+                document.getElementById('filter-analysis').classList.remove('hidden');
+
+                // Handle no conflicts case
+                if (data.no_conflicts || data.conflicts.length === 0) {
+                    document.getElementById('no-conflicts').classList.remove('hidden');
+                    document.getElementById('conflicts-section').classList.add('hidden');
+                    document.getElementById('suggestions-section').classList.add('hidden');
+                } else {
+                    document.getElementById('no-conflicts').classList.add('hidden');
+
+                    // Show conflicts
+                    const conflictsHtml = data.conflicts.map(c => `
+                        <div class="p-2 bg-red-900/30 border border-red-700 rounded">
+                            <span class="text-red-400">${c.message}</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('conflicts-list').innerHTML = conflictsHtml;
+                    document.getElementById('conflicts-section').classList.remove('hidden');
+
+                    // Show suggestions
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        const suggestionsHtml = data.suggestions.map(s => `
+                            <div class="p-2 bg-yellow-900/30 border border-yellow-700 rounded flex items-start gap-2">
+                                <svg class="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="text-yellow-200">${s.message}</span>
+                            </div>
+                        `).join('');
+                        document.getElementById('suggestions-list').innerHTML = suggestionsHtml;
+                        document.getElementById('suggestions-section').classList.remove('hidden');
+                    } else {
+                        document.getElementById('suggestions-section').classList.add('hidden');
+                    }
+                }
+
+                // Show photo values
+                const values = data.photo_values || {};
+                const valuesHtml = Object.entries(values).map(([key, val]) => {
+                    const displayVal = val === null ? '-' : (typeof val === 'boolean' ? (val ? 'Yes' : 'No') : val);
+                    return `<div><span class="text-neutral-500">${key}:</span> <span class="text-white">${displayVal}</span></div>`;
+                }).join('');
+                document.getElementById('photo-values-grid').innerHTML = valuesHtml;
+
+            } catch (err) {
+                console.error('Error analyzing conflicts:', err);
+                alert('Error analyzing filter conflicts');
+            }
+        }
+
+        async function applyOverride() {
+            if (!currentOverridePhoto || !currentPair) return;
+
+            const path = currentOverridePhoto === 'a' ? currentPair.a : currentPair.b;
+            const newCategory = document.getElementById('modal-target-category').value;
+
+            try {
+                const response = await fetch('/api/comparison/override_category', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({path: path, category: newCategory})
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update the displayed category
+                    const categoryEl = document.getElementById(`category-${currentOverridePhoto}`);
+                    categoryEl.textContent = newCategory;
+
+                    // Update photoMetrics cache
+                    if (photoMetrics[path]) {
+                        photoMetrics[path].category = newCategory;
+                    }
+
+                    closeCategoryModal();
+
+                    // Show brief notification
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50';
+                    notification.textContent = `Category changed to ${newCategory}`;
+                    document.body.appendChild(notification);
+                    setTimeout(() => notification.remove(), 2000);
+                } else {
+                    alert(data.error || 'Failed to change category');
+                }
+            } catch (err) {
+                console.error('Error applying override:', err);
+                alert('Error applying category override');
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('category-modal').classList.contains('hidden')) {
+                closeCategoryModal();
+            }
+        });
+
+        // Initial load
+        async function initPage() {
+            await loadNextPair();
+            // Weight panel is always visible, load weights for selected category
+            loadCategoryWeights();
+        }
+        initPage();
+    </script>
+</body>
+</html>
