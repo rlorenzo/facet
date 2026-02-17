@@ -127,6 +127,8 @@ Configuration:
                         help='Detect duplicate photos using pHash comparison')
     db_group.add_argument('--recompute-tags', action='store_true',
                         help='Re-tag all photos using configured tagging model')
+    db_group.add_argument('--recompute-tags-vlm', action='store_true',
+                        help='Re-tag all photos using VLM model (loads images from disk, defaults to qwen3-vl-2b)')
     db_group.add_argument('--backfill-focal-35mm', action='store_true',
                         help='Backfill focal_length_35mm from EXIF for photos missing it')
     db_group.add_argument('--score-topiq', action='store_true',
@@ -503,6 +505,72 @@ Configuration:
         exit()
 
 
+
+    # Recompute tags using VLM model (loads images from disk)
+    if args.recompute_tags_vlm:
+        from models.model_manager import ModelManager
+
+        config = ScoringConfig(args.config)
+        config.check_vram_profile_compatibility(verbose=True)
+
+        # Use configured VLM or default to qwen3-vl-2b
+        tag_model = config.get_model_for_task('tagging')
+        if tag_model == 'qwen2.5-vl-7b':
+            model_key = 'vlm_tagger'
+        else:
+            model_key = 'qwen3_vl_tagger'
+
+        model_manager = ModelManager(config)
+
+        # Get all photos from database
+        init_database(args.db)
+        with get_connection(args.db) as conn:
+            cursor = conn.execute("SELECT path FROM photos")
+            photos = cursor.fetchall()
+
+        print(f"Re-tagging {len(photos)} photos using VLM ({model_key})...")
+
+        tagger = model_manager.load_model_only(model_key)
+        if not tagger:
+            print(f"Failed to load VLM tagger")
+            exit(1)
+
+        from utils import load_image_from_path, _rawpy_lock, tags_to_string
+        tagging_settings = config.get_tagging_settings()
+        max_tags = tagging_settings.get('max_tags', 5)
+        batch_size = tagger.batch_size
+        updated = 0
+
+        with get_connection(args.db) as conn:
+            for i in tqdm(range(0, len(photos), batch_size), desc="VLM tagging"):
+                batch = photos[i:i + batch_size]
+                images = []
+                paths = []
+
+                for row in batch:
+                    try:
+                        pil_img, _ = load_image_from_path(row['path'], lock=_rawpy_lock)
+                        if pil_img:
+                            images.append(pil_img)
+                            paths.append(row['path'])
+                    except Exception as e:
+                        print(f"Failed to load {row['path']}: {e}")
+
+                if images:
+                    tags_batch = tagger.tag_batch(images, max_tags=max_tags)
+                    for path, tag_list in zip(paths, tags_batch):
+                        tags = tags_to_string(tag_list) if tag_list else None
+                        conn.execute(
+                            "UPDATE photos SET tags = ? WHERE path = ?",
+                            (tags, path)
+                        )
+                        updated += 1
+
+            conn.commit()
+
+        model_manager.unload_all()
+        print(f"Updated tags for {updated} photos")
+        exit()
 
     # Recompute tags mode (needs GPU for tagging model)
     if args.recompute_tags:

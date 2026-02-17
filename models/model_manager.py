@@ -420,8 +420,8 @@ class ModelManager:
             'clip_aesthetic': self._load_clip_aesthetic,
             'samp_net': self._load_samp_net,
             'insightface': self._load_insightface,
-            'vlm_tagger': self._load_vlm_tagger,
-            'qwen3_vl_tagger': self._load_qwen3_vl_tagger,
+            'vlm_tagger': lambda: self._load_vlm_tagger('qwen2_5_vl_7b'),
+            'qwen3_vl_tagger': lambda: self._load_vlm_tagger('qwen3_vl_2b'),
             'ram_tagger': self._load_ram_tagger,
         }
 
@@ -479,46 +479,28 @@ class ModelManager:
             print(f"Failed to load InsightFace: {e}")
             return None
 
-    def _load_vlm_tagger(self):
-        """Load VLM tagger (Qwen2.5-VL-7B) for semantic tagging."""
-        if 'vlm_tagger' in self.models:
-            return self.models['vlm_tagger']
+    def _load_vlm_tagger(self, config_key: str = 'qwen2_5_vl_7b'):
+        """Load unified VLM tagger for semantic tagging.
 
-        print("Loading VLM tagger (Qwen2.5-VL-7B)...")
+        Args:
+            config_key: Config key for model settings ('qwen2_5_vl_7b' or 'qwen3_vl_2b')
+        """
+        model_key = 'vlm_tagger' if config_key == 'qwen2_5_vl_7b' else 'qwen3_vl_tagger'
+        if model_key in self.models:
+            return self.models[model_key]
+
         try:
             from models.vlm_tagger import VLMTagger
 
-            vlm_config = self.model_settings.get('qwen2_5_vl_7b', {})
+            vlm_config = self.model_settings.get(config_key, {})
             tagger = VLMTagger(vlm_config, self.config)
             tagger.load()
 
-            self.models['vlm_tagger'] = tagger
-            print("VLM tagger loaded")
+            self.models[model_key] = tagger
             return tagger
 
         except Exception as e:
-            print(f"Failed to load VLM tagger: {e}")
-            return None
-
-    def _load_qwen3_vl_tagger(self):
-        """Load Qwen3-VL-2B tagger for semantic tagging."""
-        if 'qwen3_vl_tagger' in self.models:
-            return self.models['qwen3_vl_tagger']
-
-        print("Loading Qwen3-VL-2B tagger...")
-        try:
-            from models.vlm_tagger_qwen3 import Qwen3VLTagger
-
-            vlm_config = self.model_settings.get('qwen3_vl_2b', {})
-            tagger = Qwen3VLTagger(vlm_config, self.config)
-            tagger.load()
-
-            self.models['qwen3_vl_tagger'] = tagger
-            print("Qwen3-VL tagger loaded")
-            return tagger
-
-        except Exception as e:
-            print(f"Failed to load Qwen3-VL tagger: {e}")
+            print(f"Failed to load VLM tagger ({config_key}): {e}")
             return None
 
     def _load_ram_tagger(self):

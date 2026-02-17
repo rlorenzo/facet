@@ -497,9 +497,7 @@ class ChunkedMultiPassProcessor:
             self._pass_insightface(model, images, results)
         elif model_name == 'ram_tagger':
             self._pass_ram_tagger(model, images, results)
-        elif model_name == 'vlm_tagger':
-            self._pass_vlm_tagger(model, images, results)
-        elif model_name == 'qwen3_vl_tagger':
+        elif model_name in ('vlm_tagger', 'qwen3_vl_tagger'):
             self._pass_vlm_tagger(model, images, results)
         elif model_name in self.PYIQA_MODELS:
             self._pass_pyiqa(model, model_name, images, results)
