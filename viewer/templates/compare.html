@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compare Photos - Facet</title>
+    <title>{{ _('compare.title') }} - Facet</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .photo-card { transition: all 0.15s; cursor: pointer; }
@@ -41,11 +41,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
                 </a>
-                <h1 class="text-xl font-bold">Compare — <span id="header-category">{{ selected_category }}</span></h1>
+                <h1 class="text-xl font-bold">{{ _('compare.header') }} — <span id="header-category">{{ selected_category }}</span></h1>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-sm text-neutral-400">
-                    <span id="comparison-count">{{ selected_category_count }}</span> / {{ min_comparisons }} comparisons
+                    <span id="comparison-count">{{ selected_category_count }}</span> / {{ min_comparisons }} {{ _('compare.comparisons') }}
                 </div>
                 <div class="w-48 bg-neutral-800 rounded-full h-2">
                     <div class="progress-bar bg-purple-600 h-2 rounded-full" style="width: {{ progress_pct }}%"></div>
@@ -58,46 +58,46 @@
         <div class="max-w-6xl mx-auto">
             <!-- Category & Strategy Selector -->
             <div class="mb-6 flex items-center gap-4 flex-wrap">
-                <label class="text-neutral-400 text-sm">Category:</label>
+                <label class="text-neutral-400 text-sm">{{ _('compare.category') }}:</label>
                 <select id="category-filter" class="bg-neutral-800 text-white text-sm px-3 py-2 rounded border border-neutral-700 border-purple-500">
                     {% for cat in categories %}
                     <option value="{{ cat }}" {{ 'selected' if cat == selected_category else '' }}>{{ cat }}</option>
                     {% endfor %}
                 </select>
-                <label class="text-neutral-400 text-sm ml-4">Strategy:</label>
+                <label class="text-neutral-400 text-sm ml-4">{{ _('compare.strategy') }}:</label>
                 <select id="strategy" class="bg-neutral-800 text-white text-sm px-3 py-2 rounded border border-neutral-700">
-                    <option value="uncertainty" {{ 'selected' if strategy == 'uncertainty' else '' }}>Uncertainty (similar scores)</option>
-                    <option value="boundary" {{ 'selected' if strategy == 'boundary' else '' }}>Boundary (6-8 range)</option>
-                    <option value="active" {{ 'selected' if strategy == 'active' else '' }}>Active Learning (low counts)</option>
-                    <option value="random" {{ 'selected' if strategy == 'random' else '' }}>Random</option>
+                    <option value="uncertainty" {{ 'selected' if strategy == 'uncertainty' else '' }}>{{ _('compare.strategies.uncertainty') }}</option>
+                    <option value="boundary" {{ 'selected' if strategy == 'boundary' else '' }}>{{ _('compare.strategies.boundary') }}</option>
+                    <option value="active" {{ 'selected' if strategy == 'active' else '' }}>{{ _('compare.strategies.active') }}</option>
+                    <option value="random" {{ 'selected' if strategy == 'random' else '' }}>{{ _('compare.strategies.random') }}</option>
                 </select>
-                <button id="strategy-help-btn" class="text-neutral-400 hover:text-white" title="Strategy info">
+                <button id="strategy-help-btn" class="text-neutral-400 hover:text-white" title="{{ _('compare.tooltips.strategy_info') }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </button>
-                <span class="text-neutral-500 text-sm ml-auto">Keyboard: <span class="keyboard-hint">A</span> left wins, <span class="keyboard-hint">B</span> right wins, <span class="keyboard-hint">T</span> equal, <span class="keyboard-hint">S</span> skip</span>
+                <span class="text-neutral-500 text-sm ml-auto">{{ _('compare.keyboard.hint') }} <span class="keyboard-hint">A</span> {{ _('compare.keyboard.left_wins') }}, <span class="keyboard-hint">B</span> {{ _('compare.keyboard.right_wins') }}, <span class="keyboard-hint">T</span> {{ _('compare.keyboard.equal') }}, <span class="keyboard-hint">S</span> {{ _('compare.keyboard.skip') }}</span>
             </div>
 
             <!-- Strategy Help Panel (hidden by default) -->
             <div id="strategy-help-panel" class="hidden mb-6 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
-                <h4 class="font-bold text-white mb-3">Comparison Strategies</h4>
+                <h4 class="font-bold text-white mb-3">{{ _('compare.strategy_help.title') }}</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="p-3 bg-neutral-900 rounded">
-                        <strong class="text-purple-400">Uncertainty (Similar Scores)</strong>
-                        <p class="text-neutral-300 mt-1">Selects pairs with nearly identical aggregate scores. Best for calibrating weights - your preference reveals which metrics matter when the algorithm can't tell the difference.</p>
+                        <strong class="text-purple-400">{{ _('compare.strategy_help.uncertainty_title') }}</strong>
+                        <p class="text-neutral-300 mt-1">{{ _('compare.strategy_help.uncertainty_desc') }}</p>
                     </div>
                     <div class="p-3 bg-neutral-900 rounded">
-                        <strong class="text-purple-400">Boundary (Quality Threshold)</strong>
-                        <p class="text-neutral-300 mt-1">Focuses on photos scoring 5.5-8.5, the "gray zone" between good and mediocre. Helps refine the threshold between acceptable and rejects.</p>
+                        <strong class="text-purple-400">{{ _('compare.strategy_help.boundary_title') }}</strong>
+                        <p class="text-neutral-300 mt-1">{{ _('compare.strategy_help.boundary_desc') }}</p>
                     </div>
                     <div class="p-3 bg-neutral-900 rounded">
-                        <strong class="text-purple-400">Active Learning (Underrepresented)</strong>
-                        <p class="text-neutral-300 mt-1">Prioritizes photos that have been compared fewer times. Ensures all photos contribute to the learned scores and improves overall coverage.</p>
+                        <strong class="text-purple-400">{{ _('compare.strategy_help.active_title') }}</strong>
+                        <p class="text-neutral-300 mt-1">{{ _('compare.strategy_help.active_desc') }}</p>
                     </div>
                     <div class="p-3 bg-neutral-900 rounded">
-                        <strong class="text-purple-400">Random Sampling</strong>
-                        <p class="text-neutral-300 mt-1">Selects completely random pairs. Good for getting unbiased coverage and avoiding strategy-specific biases in your comparisons.</p>
+                        <strong class="text-purple-400">{{ _('compare.strategy_help.random_title') }}</strong>
+                        <p class="text-neutral-300 mt-1">{{ _('compare.strategy_help.random_desc') }}</p>
                     </div>
                 </div>
             </div>
@@ -107,14 +107,14 @@
                 <div id="photo-a" class="photo-card bg-neutral-900 rounded-lg overflow-hidden border-2 border-neutral-700" onclick="selectWinner('a')">
                     <div class="aspect-[4/3] bg-neutral-800 flex items-center justify-center">
                         <img id="img-a" src="" class="max-w-full max-h-full object-contain hidden">
-                        <span id="loading-a" class="text-neutral-500">Loading...</span>
+                        <span id="loading-a" class="text-neutral-500">{{ _('compare.loading') }}</span>
                     </div>
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-1">
-                            <div class="text-lg font-bold text-purple-400">Photo A</div>
+                            <div class="text-lg font-bold text-purple-400">{{ _('compare.photo_a') }}</div>
                             <div class="flex items-center gap-2" onclick="event.stopPropagation()">
                                 <span id="category-a" class="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded">-</span>
-                                <button onclick="openCategoryOverride('a')" class="text-xs text-neutral-400 hover:text-white" title="Change category">
+                                <button onclick="openCategoryOverride('a')" class="text-xs text-neutral-400 hover:text-white" title="{{ _('compare.change_category') }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
@@ -123,7 +123,7 @@
                         </div>
                         <div id="info-a" class="text-sm text-neutral-400"></div>
                         {% if show_scores %}
-                        <div id="score-a" class="text-xs text-neutral-500 mt-2"></div>
+                        <div id="score-a" class="text-neutral-500 mt-2"></div>
                         {% endif %}
                     </div>
                 </div>
@@ -131,14 +131,14 @@
                 <div id="photo-b" class="photo-card bg-neutral-900 rounded-lg overflow-hidden border-2 border-neutral-700" onclick="selectWinner('b')">
                     <div class="aspect-[4/3] bg-neutral-800 flex items-center justify-center">
                         <img id="img-b" src="" class="max-w-full max-h-full object-contain hidden">
-                        <span id="loading-b" class="text-neutral-500">Loading...</span>
+                        <span id="loading-b" class="text-neutral-500">{{ _('compare.loading') }}</span>
                     </div>
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-1">
-                            <div class="text-lg font-bold text-purple-400">Photo B</div>
+                            <div class="text-lg font-bold text-purple-400">{{ _('compare.photo_b') }}</div>
                             <div class="flex items-center gap-2" onclick="event.stopPropagation()">
                                 <span id="category-b" class="text-xs text-neutral-500 bg-neutral-800 px-2 py-1 rounded">-</span>
-                                <button onclick="openCategoryOverride('b')" class="text-xs text-neutral-400 hover:text-white" title="Change category">
+                                <button onclick="openCategoryOverride('b')" class="text-xs text-neutral-400 hover:text-white" title="{{ _('compare.change_category') }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
@@ -147,7 +147,7 @@
                         </div>
                         <div id="info-b" class="text-sm text-neutral-400"></div>
                         {% if show_scores %}
-                        <div id="score-b" class="text-xs text-neutral-500 mt-2"></div>
+                        <div id="score-b" class="text-neutral-500 mt-2"></div>
                         {% endif %}
                     </div>
                 </div>
@@ -157,7 +157,7 @@
             <div id="category-modal" class="fixed inset-0 bg-black bg-opacity-75 z-50 hidden flex items-center justify-center">
                 <div class="bg-neutral-900 rounded-lg p-6 max-w-xl w-full mx-4 max-h-[80vh] overflow-y-auto">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold">Change Category</h3>
+                        <h3 class="text-lg font-bold">{{ _('compare.modal.title') }}</h3>
                         <button onclick="closeCategoryModal()" class="text-neutral-400 hover:text-white">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -166,15 +166,15 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="text-sm text-neutral-400">Photo: <span id="modal-photo-name" class="text-white">-</span></label>
+                        <label class="text-sm text-neutral-400">{{ _('compare.modal.photo') }}: <span id="modal-photo-name" class="text-white">-</span></label>
                         <div class="flex items-center gap-2 mt-2">
-                            <span class="text-sm">Current:</span>
+                            <span class="text-sm">{{ _('compare.modal.current') }}:</span>
                             <span id="modal-current-category" class="text-purple-400 font-bold">-</span>
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="text-sm text-neutral-400 block mb-2">Select new category:</label>
+                        <label class="text-sm text-neutral-400 block mb-2">{{ _('compare.modal.select_category') }}</label>
                         <select id="modal-target-category" class="w-full bg-neutral-800 text-white px-3 py-2 rounded border border-neutral-700">
                             {% for cat in categories %}
                             <option value="{{ cat }}">{{ cat }}</option>
@@ -183,7 +183,7 @@
                     </div>
 
                     <button onclick="analyzeFilterConflicts()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded mb-4">
-                        Analyze Filter Conflicts
+                        {{ _('compare.modal.analyze') }}
                     </button>
 
                     <!-- Filter Analysis Results -->
@@ -193,74 +193,78 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                <span>Photo already matches target category filters</span>
+                                <span>{{ _('compare.modal.no_conflicts') }}</span>
                             </div>
                         </div>
 
                         <div id="conflicts-section" class="hidden mb-4">
-                            <h4 class="text-sm font-bold text-red-400 mb-2">Filter Conflicts</h4>
+                            <h4 class="text-sm font-bold text-red-400 mb-2">{{ _('compare.modal.filter_conflicts') }}</h4>
                             <div id="conflicts-list" class="space-y-2 text-sm"></div>
                         </div>
 
                         <div id="suggestions-section" class="hidden mb-4">
-                            <h4 class="text-sm font-bold text-yellow-400 mb-2">Suggested Filter Changes</h4>
+                            <h4 class="text-sm font-bold text-yellow-400 mb-2">{{ _('compare.modal.suggested_changes') }}</h4>
                             <div id="suggestions-list" class="space-y-2 text-sm"></div>
                         </div>
 
                         <div id="photo-values-section" class="mb-4">
-                            <h4 class="text-sm font-bold text-neutral-400 mb-2">Photo Values</h4>
+                            <h4 class="text-sm font-bold text-neutral-400 mb-2">{{ _('compare.modal.photo_values') }}</h4>
                             <div id="photo-values-grid" class="grid grid-cols-2 gap-2 text-xs bg-neutral-800 p-3 rounded"></div>
                         </div>
                     </div>
 
                     <div class="flex gap-2 mt-4">
                         <button onclick="applyOverride()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded">
-                            Apply Override
+                            {{ _('compare.modal.apply_override') }}
                         </button>
                         <button onclick="closeCategoryModal()" class="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded">
-                            Cancel
+                            {{ _('compare.modal.cancel') }}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="mt-6 flex justify-center gap-4">
-                <button onclick="selectWinner('tie')" class="bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-2 rounded" title="Both photos are equally good (or equally bad)">
-                    Equal Quality (T)
+            <!-- Action Buttons - Primary Row -->
+            <div class="mt-6 flex justify-center gap-3">
+                <button onclick="selectWinner('tie')" class="bg-neutral-700 hover:bg-neutral-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium ring-1 ring-neutral-600" title="{{ _('compare.tooltips.equal_quality') }}">
+                    {{ _('compare.actions.equal_quality') }}
                 </button>
-                <button onclick="selectWinner('skip')" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-6 py-2 rounded" title="Can't decide or photos are too different to compare">
-                    Can't Compare (S)
+                <button onclick="selectWinner('skip')" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-8 py-2.5 rounded-lg text-sm font-medium ring-1 ring-neutral-700" title="{{ _('compare.tooltips.cant_compare') }}">
+                    {{ _('compare.actions.cant_compare') }}
                 </button>
             </div>
 
-            <!-- Action Bar -->
-            <div class="mt-4 flex justify-center gap-4">
-                <button id="suggest-weights"
-                        class="bg-green-700 hover:bg-green-600 text-white px-6 py-2 rounded"
-                        title="Suggest optimal weights based on your comparisons">
-                    Suggest Weights
-                </button>
-                <button id="apply-weights"
-                        class="bg-purple-700 hover:bg-purple-600 text-white px-6 py-2 rounded"
-                        title="Save suggested weights to config file">
-                    Apply Config
-                </button>
-                <button id="recalculate-btn" onclick="recalculateScores()"
-                        class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-2 rounded"
-                        title="Recalculate all categories and aggregate scores using current config">
-                    Recalculate
-                </button>
-                <button id="reset-weights"
-                        class="bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-2 rounded"
-                        title="Reset weight sliders to original values">
-                    Reset Weights
-                </button>
-                <button onclick="resetComparisons()"
-                        class="bg-red-700 hover:bg-red-600 text-white px-6 py-2 rounded"
-                        title="Clear all comparison data and start fresh">
-                    Reset All
-                </button>
+            <!-- Action Buttons - Secondary Row -->
+            <div class="mt-3 flex justify-center items-center gap-6 flex-wrap">
+                <div class="flex gap-1 ring-1 ring-neutral-700 rounded-lg overflow-hidden">
+                    <button id="suggest-weights"
+                            class="bg-green-700 hover:bg-green-600 text-white px-4 py-1.5 text-sm"
+                            title="{{ _('compare.tooltips.suggest_weights') }}">
+                        {{ _('compare.actions.suggest_weights') }}
+                    </button>
+                    <button id="apply-weights"
+                            class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-1.5 text-sm"
+                            title="{{ _('compare.tooltips.apply_config') }}">
+                        {{ _('compare.actions.apply_config') }}
+                    </button>
+                    <button id="recalculate-btn" onclick="recalculateScores()"
+                            class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-1.5 text-sm"
+                            title="{{ _('compare.tooltips.recalculate') }}">
+                        {{ _('compare.actions.recalculate') }}
+                    </button>
+                </div>
+                <div class="flex gap-1 ring-1 ring-neutral-700 rounded-lg overflow-hidden">
+                    <button id="reset-weights"
+                            class="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-1.5 text-sm"
+                            title="{{ _('compare.tooltips.reset_weights') }}">
+                        {{ _('compare.actions.reset_weights') }}
+                    </button>
+                    <button onclick="resetComparisons()"
+                            class="bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 text-sm"
+                            title="{{ _('compare.tooltips.reset_all') }}">
+                        {{ _('compare.actions.reset_all') }}
+                    </button>
+                </div>
             </div>
 
             <!-- Session Stats (Compact) -->
@@ -270,30 +274,30 @@
                         <svg id="stats-chevron" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
-                        <span class="font-bold">Stats</span>
+                        <span class="font-bold">{{ _('compare.stats.title') }}</span>
                     </button>
-                    <span class="text-neutral-400">Total: <span id="stat-total" class="text-white font-bold">{{ stats.total_comparisons }}</span></span>
-                    <span class="text-neutral-400">A: <span id="stat-a" class="text-purple-400 font-bold">{{ stats.winner_breakdown.get('a', 0) }}</span></span>
-                    <span class="text-neutral-400">B: <span id="stat-b" class="text-purple-400 font-bold">{{ stats.winner_breakdown.get('b', 0) }}</span></span>
-                    <span class="text-neutral-400">Ties: <span id="stat-tie" class="text-neutral-300 font-bold">{{ stats.winner_breakdown.get('tie', 0) }}</span></span>
+                    <span class="text-neutral-400">{{ _('compare.stats.total') }}: <span id="stat-total" class="text-white font-bold">{{ stats.total_comparisons }}</span></span>
+                    <span class="text-neutral-400">{{ _('compare.stats.a_label') }}: <span id="stat-a" class="text-purple-400 font-bold">{{ stats.winner_breakdown.get('a', 0) }}</span></span>
+                    <span class="text-neutral-400">{{ _('compare.stats.b_label') }}: <span id="stat-b" class="text-purple-400 font-bold">{{ stats.winner_breakdown.get('b', 0) }}</span></span>
+                    <span class="text-neutral-400">{{ _('compare.stats.ties') }}: <span id="stat-tie" class="text-neutral-300 font-bold">{{ stats.winner_breakdown.get('tie', 0) }}</span></span>
                 </div>
                 <!-- Expanded stats (hidden by default) -->
                 <div id="stats-expanded" class="hidden mt-3 pt-3 border-t border-neutral-800">
                     <div class="grid grid-cols-4 gap-4 text-sm">
                         <div>
-                            <div class="text-neutral-500">Total Comparisons</div>
+                            <div class="text-neutral-500">{{ _('compare.stats.total_comparisons') }}</div>
                             <div id="stat-total-expanded" class="text-xl font-bold">{{ stats.total_comparisons }}</div>
                         </div>
                         <div>
-                            <div class="text-neutral-500">A Wins</div>
+                            <div class="text-neutral-500">{{ _('compare.stats.a_wins') }}</div>
                             <div id="stat-a-expanded" class="text-xl font-bold text-purple-400">{{ stats.winner_breakdown.get('a', 0) }}</div>
                         </div>
                         <div>
-                            <div class="text-neutral-500">B Wins</div>
+                            <div class="text-neutral-500">{{ _('compare.stats.b_wins') }}</div>
                             <div id="stat-b-expanded" class="text-xl font-bold text-purple-400">{{ stats.winner_breakdown.get('b', 0) }}</div>
                         </div>
                         <div>
-                            <div class="text-neutral-500">Ties</div>
+                            <div class="text-neutral-500">{{ _('compare.stats.ties_label') }}</div>
                             <div id="stat-tie-expanded" class="text-xl font-bold text-neutral-400">{{ stats.winner_breakdown.get('tie', 0) }}</div>
                         </div>
                     </div>
@@ -303,8 +307,8 @@
             <!-- Weight Preview Panel (always visible) -->
             <div id="weight-panel" class="mt-6 p-4 bg-neutral-900 rounded-lg">
                 <div class="flex items-center gap-2 mb-4">
-                    <h3 class="text-lg font-bold">Weight Preview</h3>
-                    <button id="weight-help-btn" class="text-neutral-400 hover:text-white" title="How it works">
+                    <h3 class="text-lg font-bold">{{ _('compare.weights.title') }}</h3>
+                    <button id="weight-help-btn" class="text-neutral-400 hover:text-white" title="{{ _('compare.tooltips.how_it_works') }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
@@ -313,56 +317,51 @@
 
                 <!-- How It Works (hidden by default) -->
                 <div id="weight-help-panel" class="hidden mb-4 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
-                    <h4 class="font-bold text-white mb-3">How Weight Learning Works</h4>
+                    <h4 class="font-bold text-white mb-3">{{ _('compare.weights.help.title') }}</h4>
                     <div class="space-y-3 text-neutral-300">
                         <div>
-                            <strong class="text-purple-400">1. Your comparisons teach the system</strong>
-                            <p class="mt-1">Each time you pick a winner, the system learns your preferences using the Bradley-Terry model, which calculates a "true quality score" for each photo based on win/loss patterns.</p>
+                            <strong class="text-purple-400">{{ _('compare.weights.help.step1_title') }}</strong>
+                            <p class="mt-1">{{ _('compare.weights.help.step1_desc') }}</p>
                         </div>
                         <div>
-                            <strong class="text-purple-400">2. Suggest Weights optimizes the weight combination</strong>
-                            <p class="mt-1">The algorithm finds the best <em>ratio</em> of weights that makes the combined score match your preferences. It uses mathematical optimization (SLSQP) to maximize how well the weighted sum predicts your choices.</p>
+                            <strong class="text-purple-400">{{ _('compare.weights.help.step2_title') }}</strong>
+                            <p class="mt-1">{{ _('compare.weights.help.step2_desc') }}</p>
                         </div>
                         <div>
-                            <strong class="text-purple-400">3. Rank correlation measures accuracy</strong>
+                            <strong class="text-purple-400">{{ _('compare.weights.help.step3_title') }}</strong>
                             <p class="mt-1">
-                                <span class="text-green-400">Positive correlation (+0.5 to +1.0)</span> = weights rank photos similar to your preferences<br>
-                                <span class="text-yellow-400">Near zero (-0.2 to +0.2)</span> = not enough data or mixed signals<br>
-                                <span class="text-red-400">Negative correlation</span> = weights rank opposite to your preferences
+                                <span class="text-green-400">{{ _('compare.weights.help.step3_positive') }}</span><br>
+                                <span class="text-yellow-400">{{ _('compare.weights.help.step3_zero') }}</span><br>
+                                <span class="text-red-400">{{ _('compare.weights.help.step3_negative') }}</span>
                             </p>
                         </div>
                         <div>
-                            <strong class="text-purple-400">4. Apply to save, Recalculate to update</strong>
-                            <p class="mt-1">Click "Apply to Config" to save weights, then "Recalculate Scores" to update all photo scores in the database.</p>
+                            <strong class="text-purple-400">{{ _('compare.weights.help.step4_title') }}</strong>
+                            <p class="mt-1">{{ _('compare.weights.help.step4_desc') }}</p>
                         </div>
                     </div>
                     <div class="mt-3 p-2 bg-neutral-900 rounded text-xs text-neutral-400">
-                        <strong>Tip:</strong> Do 30+ comparisons per category for suggestions (50+ recommended for accuracy). Mix strategies for best coverage. Ties are now included in optimization.
+                        <strong>Tip:</strong> {{ _('compare.weights.help.tip') }}
                     </div>
                 </div>
 
                 <!-- Suggestion Info (hidden by default) -->
                 <div id="suggestion-info" class="mb-4 p-3 bg-neutral-800 rounded hidden">
                     <div class="flex items-center justify-between flex-wrap gap-2">
-                        <span class="text-sm text-neutral-400">
-                            Learned from <span id="suggestion-comparisons">0</span> comparisons
-                            <span id="suggestion-ties" class="text-neutral-500">(incl. <span id="suggestion-ties-count">0</span> ties)</span>
-                        </span>
+                        <span id="suggestion-learned" class="text-sm text-neutral-400"></span>
                         <span class="text-sm">
-                            Prediction accuracy: <span id="suggestion-acc-before" class="text-neutral-400">0%</span>
+                            {{ _('compare.weights.prediction_accuracy') }}: <span id="suggestion-acc-before" class="text-neutral-400">0%</span>
                             &rarr; <span id="suggestion-acc-after" class="text-green-400 font-bold">0%</span>
                             (<span id="suggestion-improvement" class="font-bold">+0%</span>)
                         </span>
                     </div>
-                    <div id="suggestion-mispredicted" class="mt-2 text-xs text-neutral-500 hidden">
-                        <span id="suggestion-mispredicted-count">0</span> comparisons predicted incorrectly
-                    </div>
+                    <div id="suggestion-mispredicted" class="mt-2 text-xs text-neutral-500 hidden"></div>
                     <div id="suggestion-warning" class="mt-2 text-xs text-yellow-500 hidden">
-                        Current weights already achieve good accuracy - changes not recommended.
+                        {{ _('compare.weights.already_good') }}
                     </div>
                     <!-- Weight changes delta -->
                     <div id="suggestion-deltas" class="mt-3 pt-3 border-t border-neutral-700">
-                        <div class="text-xs text-neutral-400 mb-2">Weight changes:</div>
+                        <div class="text-xs text-neutral-400 mb-2">{{ _('compare.weights.weight_changes') }}</div>
                         <div id="suggestion-deltas-list" class="flex flex-wrap gap-2 text-xs"></div>
                     </div>
                 </div>
@@ -370,19 +369,19 @@
                 <div class="bg-neutral-800 p-4 rounded">
                     <!-- Compact Score Preview Header -->
                     <div class="flex items-center justify-between mb-3">
-                        <h4 class="font-bold">Score Preview</h4>
-                        <span class="text-sm">Category: <span id="category-name" class="text-purple-400">-</span></span>
+                        <h4 class="font-bold">{{ _('compare.weights.score_preview') }}</h4>
+                        <span class="text-sm">{{ _('compare.weights.category_label') }}: <span id="category-name" class="text-purple-400">-</span></span>
                     </div>
                     <div class="grid grid-cols-2 gap-4 text-sm mb-4 pb-3 border-b border-neutral-700">
                         <div class="flex items-center gap-2">
-                            <span class="text-neutral-400">Photo A:</span>
+                            <span class="text-neutral-400">{{ _('compare.photo_a') }}:</span>
                             <span id="preview-a-current" class="text-purple-400">-</span>
                             <span class="text-neutral-500">&rarr;</span>
                             <span id="preview-a-new" class="text-green-400">-</span>
                             <span id="preview-a-delta" class="text-xs">(Δ-)</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-neutral-400">Photo B:</span>
+                            <span class="text-neutral-400">{{ _('compare.photo_b') }}:</span>
                             <span id="preview-b-current" class="text-purple-400">-</span>
                             <span class="text-neutral-500">&rarr;</span>
                             <span id="preview-b-new" class="text-green-400">-</span>
@@ -391,11 +390,11 @@
                     </div>
                     <!-- Column headers for unified grid -->
                     <div class="flex items-center gap-2 text-xs text-neutral-500 mb-2 px-1">
-                        <span class="w-24">Property</span>
-                        <span class="w-12 text-right">A</span>
-                        <span class="w-12 text-right">B</span>
-                        <span class="flex-1 text-center">Weight</span>
-                        <span class="w-8 text-right">%</span>
+                        <span class="w-24">{{ _('compare.weights.property') }}</span>
+                        <span class="w-12 text-right">{{ _('compare.weights.col_a') }}</span>
+                        <span class="w-12 text-right">{{ _('compare.weights.col_b') }}</span>
+                        <span class="flex-1 text-center">{{ _('compare.weights.col_weight') }}</span>
+                        <span class="w-8 text-right">{{ _('compare.weights.col_pct') }}</span>
                         <span class="w-6"></span>
                         <span class="w-12"></span>
                     </div>
@@ -408,7 +407,134 @@
         </div>
     </main>
 
+    <!-- Footer with Language Switcher -->
+    <footer class="bg-neutral-900 border-t border-neutral-800 py-4 mt-8">
+        <div class="flex justify-center items-center gap-2">
+            {% for code in supported_languages %}
+            <a href="?{{ request.query_string.decode('utf-8') }}&lang={{ code }}"
+               class="text-xs px-3 py-1.5 rounded transition-colors {% if lang == code %}bg-green-600 text-white{% else %}bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700{% endif %}">
+                {{ _('language.' ~ code) }}
+            </a>
+            {% endfor %}
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toast-container" class="flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset">
+            <!-- Success icon -->
+            <svg id="toast-icon-success" class="h-5 w-5 flex-shrink-0 text-green-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <!-- Error icon -->
+            <svg id="toast-icon-error" class="h-5 w-5 flex-shrink-0 text-red-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p id="toast-text" class="text-sm font-medium"></p>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden">
+        <div class="fixed inset-0 bg-black/75 transition-opacity"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-neutral-900 rounded-xl shadow-2xl ring-1 ring-neutral-700 max-w-md w-full p-6">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 rounded-full bg-red-900/50 p-2">
+                        <svg class="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="confirm-title" class="text-lg font-semibold"></h3>
+                        <p id="confirm-body" class="mt-2 text-sm text-neutral-400 whitespace-pre-line"></p>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button id="confirm-cancel" class="rounded-md bg-neutral-700 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-600"></button>
+                    <button id="confirm-ok" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // i18n translations
+        const I18N = {{ js_translations(['compare', 'ui']) | tojson | safe }};
+        function t(key, vars={}) {
+            const keys = key.split('.');
+            let value = I18N;
+            for (const k of keys) {
+                if (value && typeof value === 'object' && k in value) {
+                    value = value[k];
+                } else {
+                    return key;
+                }
+            }
+            if (typeof value === 'string' && Object.keys(vars).length > 0) {
+                return value.replace(/\{(\w+)\}/g, (m, k) => vars[k] !== undefined ? vars[k] : m);
+            }
+            return value || key;
+        }
+
+        // Toast notification
+        let toastTimer = null;
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const container = document.getElementById('toast-container');
+            const text = document.getElementById('toast-text');
+            const iconSuccess = document.getElementById('toast-icon-success');
+            const iconError = document.getElementById('toast-icon-error');
+
+            text.textContent = message;
+
+            if (isError) {
+                container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset bg-red-900 text-red-200 ring-red-700/50';
+                iconSuccess.classList.add('hidden');
+                iconError.classList.remove('hidden');
+            } else {
+                container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset bg-green-900 text-green-200 ring-green-700/50';
+                iconSuccess.classList.remove('hidden');
+                iconError.classList.add('hidden');
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // Styled confirm modal (returns Promise)
+        function showConfirm(title, body) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('confirm-modal');
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-body').textContent = body;
+                document.getElementById('confirm-cancel').textContent = t('compare.confirm.cancel_button');
+                document.getElementById('confirm-ok').textContent = t('compare.confirm.confirm_button');
+                modal.classList.remove('hidden');
+
+                function cleanup(result) {
+                    modal.classList.add('hidden');
+                    document.getElementById('confirm-ok').removeEventListener('click', onOk);
+                    document.getElementById('confirm-cancel').removeEventListener('click', onCancel);
+                    document.removeEventListener('keydown', onKey);
+                    resolve(result);
+                }
+                function onOk() { cleanup(true); }
+                function onCancel() { cleanup(false); }
+                function onKey(e) { if (e.key === 'Escape') cleanup(false); }
+
+                document.getElementById('confirm-ok').addEventListener('click', onOk);
+                document.getElementById('confirm-cancel').addEventListener('click', onCancel);
+                document.addEventListener('keydown', onKey);
+            });
+        }
+
         let currentPair = null;
         const showScores = {{ 'true' if show_scores else 'false' }};
 
@@ -429,7 +555,7 @@
                 const data = await response.json();
 
                 if (data.error) {
-                    alert(data.error);
+                    showToast(data.error, true);
                     return;
                 }
 
@@ -444,7 +570,7 @@
                     document.getElementById('img-a').classList.remove('hidden');
                 };
                 document.getElementById('img-a').onerror = () => {
-                    document.getElementById('loading-a').textContent = 'Failed to load';
+                    document.getElementById('loading-a').textContent = t('compare.failed_to_load');
                     console.error('Failed to load thumbnail for:', data.a);
                 };
                 document.getElementById('img-b').onload = () => {
@@ -452,7 +578,7 @@
                     document.getElementById('img-b').classList.remove('hidden');
                 };
                 document.getElementById('img-b').onerror = () => {
-                    document.getElementById('loading-b').textContent = 'Failed to load';
+                    document.getElementById('loading-b').textContent = t('compare.failed_to_load');
                     console.error('Failed to load thumbnail for:', data.b);
                 };
 
@@ -461,8 +587,8 @@
                 document.getElementById('info-b').textContent = data.b.split('/').pop();
 
                 if (showScores) {
-                    document.getElementById('score-a').textContent = `Score: ${data.score_a?.toFixed(2) || 'N/A'}`;
-                    document.getElementById('score-b').textContent = `Score: ${data.score_b?.toFixed(2) || 'N/A'}`;
+                    document.getElementById('score-a').textContent = t('compare.score_prefix', {score: data.score_a?.toFixed(2) || 'N/A'});
+                    document.getElementById('score-b').textContent = t('compare.score_prefix', {score: data.score_b?.toFixed(2) || 'N/A'});
                 }
 
                 // Reset selection state
@@ -470,7 +596,7 @@
                 document.getElementById('photo-b').classList.remove('selected');
             } catch (err) {
                 console.error('Error loading pair:', err);
-                alert('Failed to load next pair');
+                showToast(t('compare.error.load_pair'), true);
             }
         }
 
@@ -518,7 +644,9 @@
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return; // Don't trigger on input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            // Don't trigger when confirm modal is open
+            if (!document.getElementById('confirm-modal').classList.contains('hidden')) return;
             if (e.key.toLowerCase() === 'a') selectWinner('a');
             else if (e.key.toLowerCase() === 'b') selectWinner('b');
             else if (e.key.toLowerCase() === 't') selectWinner('tie');
@@ -564,17 +692,12 @@
         // Reset all comparisons
         async function resetComparisons() {
             const totalComparisons = document.getElementById('stat-total').textContent;
-            const confirmMsg = `RESET ALL COMPARISON DATA
+            const confirmed = await showConfirm(
+                t('compare.confirm.reset_title'),
+                t('compare.confirm.reset_body', {count: totalComparisons})
+            );
+            if (!confirmed) return;
 
-This will permanently delete:
-- ${totalComparisons} pairwise comparisons
-- All learned weight suggestions
-- All session statistics
-
-This cannot be undone. Continue?`;
-            if (!confirm(confirmMsg)) {
-                return;
-            }
             try {
                 const response = await fetch('/api/comparison/reset', { method: 'POST' });
                 const data = await response.json();
@@ -584,37 +707,29 @@ This cannot be undone. Continue?`;
                     document.getElementById('comparison-count').textContent = '0';
                     document.querySelector('.progress-bar').style.width = '0%';
                     document.getElementById('suggestion-info').classList.add('hidden');
-                    alert('Comparison data has been reset.');
+                    showToast(t('compare.notify.data_reset'));
                     loadNextPair();
                 } else {
-                    alert('Error resetting data: ' + (data.error || 'Unknown error'));
+                    showToast((data.error || t('compare.error.reset_failed')), true);
                 }
             } catch (err) {
                 console.error('Error resetting comparisons:', err);
-                alert('Error resetting comparison data');
+                showToast(t('compare.error.reset_failed'), true);
             }
         }
 
         // Recalculate all scores
         async function recalculateScores() {
             const category = document.getElementById('category-filter').value;
-            const confirmMsg = `RECALCULATE ALL PHOTO SCORES
-
-This will:
-- Re-determine categories for all photos based on config filters
-- Recalculate aggregate scores using current category weights
-- Update the database with new scores
-
-Category weights from: ${category || 'current config'}
-
-This may take several minutes for large databases. Continue?`;
-            if (!confirm(confirmMsg)) {
-                return;
-            }
+            const confirmed = await showConfirm(
+                t('compare.confirm.recalculate_title'),
+                t('compare.confirm.recalculate_body', {category: category || 'current config'})
+            );
+            if (!confirmed) return;
 
             const btn = document.getElementById('recalculate-btn');
             const originalText = btn.textContent;
-            btn.textContent = 'Recalculating...';
+            btn.textContent = t('compare.actions.recalculating');
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
@@ -623,15 +738,15 @@ This may take several minutes for large databases. Continue?`;
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('Recalculation complete! Categories and scores have been updated.');
+                    showToast(t('compare.notify.recalculate_complete'));
                     // Reload the current pair to show updated scores
                     loadNextPair();
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
+                    showToast((data.error || t('compare.error.recalculate_failed')), true);
                 }
             } catch (err) {
                 console.error('Error recalculating:', err);
-                alert('Error recalculating scores. Check console for details.');
+                showToast(t('compare.error.recalculate_failed'), true);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
@@ -687,14 +802,14 @@ This may take several minutes for large databases. Continue?`;
         document.getElementById('apply-weights').addEventListener('click', async () => {
             const category = document.getElementById('category-filter').value;
             if (!category) {
-                alert('Please select a category first to apply weights.');
+                showToast(t('compare.error.select_category_first'), true);
                 return;
             }
 
             // Check if weights have changed
             const hasChanges = Object.keys(currentWeights).some(k => currentWeights[k] !== originalWeights[k]);
             if (!hasChanges) {
-                alert('No weight changes to apply.');
+                showToast(t('compare.error.no_weight_changes'), true);
                 return;
             }
 
@@ -709,26 +824,15 @@ This may take several minutes for large databases. Continue?`;
                 }
             }
 
-            const confirmMsg = `APPLY WEIGHTS TO CONFIG
-
-Category: ${category}
-
-Weight changes:
-${changes.join('\\n')}
-
-This will:
-- Update scoring_config.json with new weights
-- Create a backup of the current config
-- NOT recalculate existing scores (use "Recalculate Scores" after)
-
-Save these weights?`;
-            if (!confirm(confirmMsg)) {
-                return;
-            }
+            const confirmed = await showConfirm(
+                t('compare.confirm.apply_title'),
+                t('compare.confirm.apply_body', {category: category, changes: changes.join('\n')})
+            );
+            if (!confirmed) return;
 
             const btn = document.getElementById('apply-weights');
             const originalText = btn.textContent;
-            btn.textContent = 'Saving...';
+            btn.textContent = t('compare.actions.saving');
             btn.disabled = true;
 
             try {
@@ -745,25 +849,52 @@ Save these weights?`;
                 const data = await response.json();
                 if (data.success) {
                     originalWeights = {...currentWeights};
-                    alert(`Weights saved for "${category}"!\\n\\nBackup created: ${data.backup}\\n\\nClick "Recalculate Scores" to apply to all photos.`);
+                    showToast(t('compare.notify.weights_saved', {category: category}));
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
+                    showToast((data.error || t('compare.error.save_weights_failed')), true);
                 }
             } catch (err) {
                 console.error('Error saving weights:', err);
-                alert('Error saving weights');
+                showToast(t('compare.error.save_weights_failed'), true);
             } finally {
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
         });
 
+        // Weight label lookup
+        const WEIGHT_LABEL_KEYS = {
+            'aesthetic_percent': 'compare.weights.labels.aesthetic',
+            'quality_percent': 'compare.weights.labels.quality_score',
+            'face_quality_percent': 'compare.weights.labels.face_quality',
+            'face_sharpness_percent': 'compare.weights.labels.face_sharpness',
+            'eye_sharpness_percent': 'compare.weights.labels.eye_sharpness',
+            'tech_sharpness_percent': 'compare.weights.labels.tech_sharpness',
+            'composition_percent': 'compare.weights.labels.composition',
+            'power_point_percent': 'compare.weights.labels.power_points',
+            'leading_lines_percent': 'compare.weights.labels.leading_lines',
+            'exposure_percent': 'compare.weights.labels.exposure',
+            'color_percent': 'compare.weights.labels.color',
+            'contrast_percent': 'compare.weights.labels.contrast',
+            'dynamic_range_percent': 'compare.weights.labels.dynamic_range',
+            'saturation_percent': 'compare.weights.labels.saturation',
+            'noise_percent': 'compare.weights.labels.noise_inv',
+            'isolation_percent': 'compare.weights.labels.isolation'
+        };
+
+        const WEIGHT_GROUP_KEYS = {
+            'Quality': 'compare.weights.groups.quality',
+            'Composition': 'compare.weights.groups.composition',
+            'Technical': 'compare.weights.groups.technical',
+            'Bonus': 'compare.weights.groups.bonus'
+        };
+
         // Suggest weights button
         document.getElementById('suggest-weights').addEventListener('click', async () => {
             const category = document.getElementById('category-filter').value || null;
             const btn = document.getElementById('suggest-weights');
             btn.disabled = true;
-            btn.textContent = 'Loading...';
+            btn.textContent = t('compare.actions.loading');
 
             try {
                 const url = category
@@ -782,16 +913,13 @@ Save these weights?`;
                     updateScorePreview();
 
                     // Show suggestion info with accuracy metrics
-                    document.getElementById('suggestion-comparisons').textContent = data.comparisons_used;
+                    document.getElementById('suggestion-learned').textContent =
+                        t('compare.weights.learned_from', {count: data.comparisons_used});
 
                     // Show ties count if available
-                    const tiesEl = document.getElementById('suggestion-ties');
-                    const tiesCountEl = document.getElementById('suggestion-ties-count');
+                    const learnedEl = document.getElementById('suggestion-learned');
                     if (data.ties_included && data.ties_included > 0) {
-                        tiesCountEl.textContent = data.ties_included;
-                        tiesEl.classList.remove('hidden');
-                    } else {
-                        tiesEl.classList.add('hidden');
+                        learnedEl.textContent += ' (' + t('compare.weights.incl_ties', {count: data.ties_included}) + ')';
                     }
 
                     // Show accuracy before/after
@@ -806,9 +934,8 @@ Save these weights?`;
 
                     // Show mispredicted count if any
                     const mispredEl = document.getElementById('suggestion-mispredicted');
-                    const mispredCountEl = document.getElementById('suggestion-mispredicted-count');
                     if (data.mispredicted_count && data.mispredicted_count > 0) {
-                        mispredCountEl.textContent = data.mispredicted_count;
+                        mispredEl.textContent = t('compare.weights.mispredicted', {count: data.mispredicted_count});
                         mispredEl.classList.remove('hidden');
                     } else {
                         mispredEl.classList.add('hidden');
@@ -823,7 +950,6 @@ Save these weights?`;
                     }
 
                     // Build weight deltas display
-                    // Note: weights are already in percentage format (0-100)
                     const deltasList = document.getElementById('suggestion-deltas-list');
                     deltasList.innerHTML = '';
                     const allKeys = new Set([...Object.keys(oldWeights), ...Object.keys(currentWeights)]);
@@ -832,20 +958,18 @@ Save these weights?`;
                         const oldVal = oldWeights[key] || 0;
                         const newVal = currentWeights[key] || 0;
                         const delta = newVal - oldVal;
-                        if (Math.abs(delta) >= 1) {  // Only show changes >= 1%
+                        if (Math.abs(delta) >= 1) {
                             deltas.push({ key, oldVal, newVal, delta });
                         }
                     }
-                    // Sort by absolute delta descending
                     deltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
                     if (deltas.length === 0) {
-                        deltasList.innerHTML = '<span class="text-neutral-500">No significant changes</span>';
+                        deltasList.innerHTML = `<span class="text-neutral-500">${t('compare.weights.no_significant_changes')}</span>`;
                     } else {
                         for (const { key, oldVal, newVal, delta } of deltas) {
                             const colorClass = delta > 0 ? 'text-green-400' : 'text-red-400';
                             const arrow = delta > 0 ? '↑' : '↓';
-                            // Clean up key name: remove _percent suffix and replace underscores
                             const displayName = key.replace(/_percent$/, '').replace(/_/g, ' ');
                             const chip = document.createElement('span');
                             chip.className = 'inline-flex items-center gap-1 px-2 py-1 bg-neutral-700 rounded';
@@ -860,15 +984,15 @@ Save these weights?`;
 
                     document.getElementById('suggestion-info').classList.remove('hidden');
                 } else {
-                    alert(data.message || 'Could not generate suggestions');
+                    showToast(data.message || t('compare.error.no_suggestions'), true);
                     document.getElementById('suggestion-info').classList.add('hidden');
                 }
             } catch (err) {
                 console.error('Error fetching suggestions:', err);
-                alert('Error fetching weight suggestions');
+                showToast(t('compare.error.suggestions_failed'), true);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Suggest Weights';
+                btn.textContent = t('compare.actions.suggest_weights');
             }
         });
 
@@ -901,25 +1025,25 @@ Save these weights?`;
             // All possible scoring components with labels and metric keys (grouped)
             const allComponents = [
                 // Primary quality metrics
-                { key: 'aesthetic_percent', label: 'Aesthetic', metricKey: 'aesthetic', group: 'Quality' },
-                { key: 'quality_percent', label: 'Quality Score', metricKey: 'quality_score', group: 'Quality' },
-                { key: 'face_quality_percent', label: 'Face Quality', metricKey: 'face_quality', group: 'Quality' },
-                { key: 'face_sharpness_percent', label: 'Face Sharpness', metricKey: 'face_sharpness', group: 'Quality' },
-                { key: 'eye_sharpness_percent', label: 'Eye Sharpness', metricKey: 'eye_sharpness', group: 'Quality' },
-                { key: 'tech_sharpness_percent', label: 'Tech Sharpness', metricKey: 'tech_sharpness', group: 'Quality' },
+                { key: 'aesthetic_percent', metricKey: 'aesthetic', group: 'Quality' },
+                { key: 'quality_percent', metricKey: 'quality_score', group: 'Quality' },
+                { key: 'face_quality_percent', metricKey: 'face_quality', group: 'Quality' },
+                { key: 'face_sharpness_percent', metricKey: 'face_sharpness', group: 'Quality' },
+                { key: 'eye_sharpness_percent', metricKey: 'eye_sharpness', group: 'Quality' },
+                { key: 'tech_sharpness_percent', metricKey: 'tech_sharpness', group: 'Quality' },
                 // Composition metrics
-                { key: 'composition_percent', label: 'Composition', metricKey: 'comp_score', group: 'Composition' },
-                { key: 'power_point_percent', label: 'Power Points', metricKey: 'power_point_score', group: 'Composition' },
-                { key: 'leading_lines_percent', label: 'Leading Lines', metricKey: 'leading_lines_score', group: 'Composition' },
+                { key: 'composition_percent', metricKey: 'comp_score', group: 'Composition' },
+                { key: 'power_point_percent', metricKey: 'power_point_score', group: 'Composition' },
+                { key: 'leading_lines_percent', metricKey: 'leading_lines_score', group: 'Composition' },
                 // Technical metrics
-                { key: 'exposure_percent', label: 'Exposure', metricKey: 'exposure_score', group: 'Technical' },
-                { key: 'color_percent', label: 'Color', metricKey: 'color_score', group: 'Technical' },
-                { key: 'contrast_percent', label: 'Contrast', metricKey: 'contrast_score', group: 'Technical' },
-                { key: 'dynamic_range_percent', label: 'Dynamic Range', metricKey: 'dynamic_range_stops', group: 'Technical' },
-                { key: 'saturation_percent', label: 'Saturation', metricKey: 'mean_saturation', group: 'Technical' },
-                { key: 'noise_percent', label: 'Noise (inv)', metricKey: 'noise_sigma', group: 'Technical', inverse: true },
+                { key: 'exposure_percent', metricKey: 'exposure_score', group: 'Technical' },
+                { key: 'color_percent', metricKey: 'color_score', group: 'Technical' },
+                { key: 'contrast_percent', metricKey: 'contrast_score', group: 'Technical' },
+                { key: 'dynamic_range_percent', metricKey: 'dynamic_range_stops', group: 'Technical' },
+                { key: 'saturation_percent', metricKey: 'mean_saturation', group: 'Technical' },
+                { key: 'noise_percent', metricKey: 'noise_sigma', group: 'Technical', inverse: true },
                 // Bonuses
-                { key: 'isolation_percent', label: 'Isolation', metricKey: 'isolation_bonus', group: 'Bonus' },
+                { key: 'isolation_percent', metricKey: 'isolation_bonus', group: 'Bonus' },
             ];
 
             // Group components by category
@@ -935,13 +1059,11 @@ Save these weights?`;
             function getCompareClass(valA, valB, inverse = false) {
                 if (valA == null || valB == null || valA === valB) return ['text-neutral-300', 'text-neutral-300'];
                 if (inverse) {
-                    // Lower is better (e.g., noise)
                     return [
                         valA < valB ? 'text-green-400' : 'text-red-400',
                         valB < valA ? 'text-green-400' : 'text-red-400'
                     ];
                 } else {
-                    // Higher is better
                     return [
                         valA > valB ? 'text-green-400' : 'text-red-400',
                         valB > valA ? 'text-green-400' : 'text-red-400'
@@ -951,16 +1073,15 @@ Save these weights?`;
 
             // Render each group with header
             for (const [groupName, components] of Object.entries(groups)) {
-                // Add group header
+                const groupLabel = t(WEIGHT_GROUP_KEYS[groupName] || groupName);
                 container.insertAdjacentHTML('beforeend', `
-                    <div class="text-xs text-purple-400 uppercase tracking-wide mt-3 mb-1 first:mt-0">${groupName}</div>
+                    <div class="text-xs text-purple-400 uppercase tracking-wide mt-3 mb-1 first:mt-0">${groupLabel}</div>
                 `);
 
-                for (const {key, label, metricKey, inverse} of components) {
-                    // Default to 0 if not in currentWeights
+                for (const {key, metricKey, inverse} of components) {
+                    const label = t(WEIGHT_LABEL_KEYS[key] || key);
                     const value = currentWeights[key] || 0;
                     const origValue = originalWeights[key] || 0;
-                    // Ensure currentWeights has all keys for preview calculation
                     if (!(key in currentWeights)) {
                         currentWeights[key] = 0;
                     }
@@ -970,7 +1091,6 @@ Save these weights?`;
                     const deltaText = delta !== 0 ? (delta > 0 ? '+' + delta : delta) : '';
                     const origMarkerPos = origValue + '%';
 
-                    // Get A/B metric values
                     const valA = metricsA[metricKey];
                     const valB = metricsB[metricKey];
                     const fmtA = valA != null ? (typeof valA === 'number' ? valA.toFixed(2) : valA) : '-';
@@ -1208,7 +1328,7 @@ Save these weights?`;
 
             } catch (err) {
                 console.error('Error analyzing conflicts:', err);
-                alert('Error analyzing filter conflicts');
+                showToast(t('compare.error.analyze_failed'), true);
             }
         }
 
@@ -1237,19 +1357,13 @@ Save these weights?`;
                     }
 
                     closeCategoryModal();
-
-                    // Show brief notification
-                    const notification = document.createElement('div');
-                    notification.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50';
-                    notification.textContent = `Category changed to ${newCategory}`;
-                    document.body.appendChild(notification);
-                    setTimeout(() => notification.remove(), 2000);
+                    showToast(t('compare.notify.category_changed', {category: newCategory}));
                 } else {
-                    alert(data.error || 'Failed to change category');
+                    showToast(data.error || t('compare.error.override_failed'), true);
                 }
             } catch (err) {
                 console.error('Error applying override:', err);
-                alert('Error applying category override');
+                showToast(t('compare.error.override_failed'), true);
             }
         }
 

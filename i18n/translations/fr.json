@@ -49,13 +49,16 @@
       "selected": "selectionnes",
       "of": "sur",
       "from": "Du",
-      "to": "Au"
+      "to": "Au",
+      "loading": "Chargement...",
+      "na": "N/A"
     },
     "badges": {
       "best": "TOP",
       "blink": "CLIN",
       "bw": "N&B",
-      "dup": "DUP"
+      "dup": "DUP",
+      "rejected": "REJ"
     }
   },
   "drawer": {
@@ -146,7 +149,13 @@
     "saturation": "Saturation",
     "noise": "Bruit",
     "bonus_section": "Bonus",
-    "isolation": "Isolation"
+    "isolation": "Isolation",
+    "exif_section": "EXIF",
+    "camera": "Appareil",
+    "lens": "Objectif",
+    "focal": "Focale",
+    "shutter": "Vitesse",
+    "iso": "ISO"
   },
   "notifications": {
     "copied": "Copie !",
@@ -158,7 +167,12 @@
     "failed_rename": "Echec du renommage",
     "error_merging": "Erreur lors de la fusion",
     "error_deleting": "Erreur lors de la suppression",
-    "faces_assigned": "Visages assignes"
+    "faces_assigned": "Visages assignes",
+    "connection_error": "Erreur de connexion",
+    "downloading_count": "Telechargement de {count} photo...",
+    "downloading_count_plural": "Telechargement de {count} photos...",
+    "downloaded_count": "{count} photo telechargee",
+    "downloaded_count_plural": "{count} photos telechargees"
   },
   "manage_persons": {
     "title": "Gerer les personnes",
@@ -187,10 +201,24 @@
     "search_persons": "Rechercher des personnes...",
     "no_named_persons": "Aucune personne nommee trouvee",
     "error_loading_persons": "Erreur lors du chargement des personnes",
-    "suggest_merges": "Suggerer des fusions"
+    "suggest_merges": "Suggerer des fusions",
+    "person_fallback": "Personne {id}",
+    "photos_count": "{count} photos",
+    "unassigned": "Non assigne",
+    "face_number": "Visage {index}",
+    "loading": "Chargement...",
+    "no_faces_in_photo": "Aucun visage trouve dans cette photo",
+    "error_loading_faces": "Erreur lors du chargement des visages",
+    "error_self_merge": "Impossible de fusionner une personne avec elle-meme",
+    "error_avatar": "Erreur lors du changement d'avatar",
+    "error_assigning_faces": "Erreur lors de l'assignation des visages",
+    "rename_person": "Renommer la personne",
+    "confirm_remove_person": "Retirer cette personne de cette photo ?",
+    "remove_person_title": "Retirer la personne de cette photo"
   },
   "compare": {
     "title": "Comparer les photos",
+    "header": "Comparer",
     "comparisons": "comparaisons",
     "category": "Categorie",
     "strategy": "Strategie",
@@ -222,7 +250,140 @@
     "photo_b": "Photo B",
     "loading": "Chargement...",
     "no_photos": "Aucune photo disponible pour la comparaison dans cette categorie.",
-    "change_category": "Changer de categorie"
+    "change_category": "Changer de categorie",
+    "score_prefix": "Score : {score}",
+    "failed_to_load": "Echec du chargement",
+    "actions": {
+      "equal_quality": "Qualite egale (T)",
+      "cant_compare": "Incomparable (S)",
+      "suggest_weights": "Suggerer les poids",
+      "apply_config": "Appliquer config",
+      "recalculate": "Recalculer",
+      "reset_weights": "Reinitialiser poids",
+      "reset_all": "Tout reinitialiser",
+      "recalculating": "Recalcul en cours...",
+      "saving": "Sauvegarde...",
+      "loading": "Chargement..."
+    },
+    "tooltips": {
+      "equal_quality": "Les deux photos sont de qualite egale (ou egalement mauvaises)",
+      "cant_compare": "Impossible de decider ou photos trop differentes pour comparer",
+      "suggest_weights": "Suggerer des poids optimaux bases sur vos comparaisons",
+      "apply_config": "Sauvegarder les poids suggeres dans le fichier de configuration",
+      "recalculate": "Recalculer toutes les categories et scores agreges avec la configuration actuelle",
+      "reset_weights": "Reinitialiser les curseurs de poids aux valeurs d'origine",
+      "reset_all": "Effacer toutes les donnees de comparaison et repartir de zero",
+      "strategy_info": "Info strategie",
+      "how_it_works": "Comment ca marche"
+    },
+    "stats": {
+      "title": "Stats",
+      "total": "Total",
+      "a_label": "A",
+      "b_label": "B",
+      "ties": "Egalites",
+      "total_comparisons": "Comparaisons totales",
+      "a_wins": "Victoires A",
+      "b_wins": "Victoires B",
+      "ties_label": "Egalites"
+    },
+    "weights": {
+      "title": "Apercu des poids",
+      "score_preview": "Apercu du score",
+      "category_label": "Categorie",
+      "property": "Propriete",
+      "col_a": "A",
+      "col_b": "B",
+      "col_weight": "Poids",
+      "col_pct": "%",
+      "no_significant_changes": "Aucun changement significatif",
+      "weight_changes": "Changements de poids :",
+      "learned_from": "Appris a partir de {count} comparaisons",
+      "incl_ties": "incl. {count} egalites",
+      "prediction_accuracy": "Precision de prediction",
+      "mispredicted": "{count} comparaisons mal predites",
+      "already_good": "Les poids actuels atteignent deja une bonne precision - changements non recommandes.",
+      "groups": {
+        "quality": "Qualite",
+        "composition": "Composition",
+        "technical": "Technique",
+        "bonus": "Bonus"
+      },
+      "labels": {
+        "aesthetic": "Esthetique",
+        "quality_score": "Score qualite",
+        "face_quality": "Qualite visage",
+        "face_sharpness": "Nettete visage",
+        "eye_sharpness": "Nettete yeux",
+        "tech_sharpness": "Nettete technique",
+        "composition": "Composition",
+        "power_points": "Points forts",
+        "leading_lines": "Lignes directrices",
+        "exposure": "Exposition",
+        "color": "Couleur",
+        "contrast": "Contraste",
+        "dynamic_range": "Plage dynamique",
+        "saturation": "Saturation",
+        "noise_inv": "Bruit (inv)",
+        "isolation": "Isolation"
+      },
+      "help": {
+        "title": "Comment fonctionne l'apprentissage des poids",
+        "step1_title": "1. Vos comparaisons enseignent au systeme",
+        "step1_desc": "Chaque fois que vous choisissez un gagnant, le systeme apprend vos preferences en utilisant le modele Bradley-Terry, qui calcule un \"vrai score de qualite\" pour chaque photo base sur les victoires/defaites.",
+        "step2_title": "2. Suggerer les poids optimise la combinaison",
+        "step2_desc": "L'algorithme trouve le meilleur ratio de poids pour que le score combine corresponde a vos preferences. Il utilise l'optimisation mathematique (SLSQP) pour maximiser la prediction de vos choix.",
+        "step3_title": "3. La correlation de rang mesure la precision",
+        "step3_positive": "Correlation positive (+0.5 a +1.0) = les poids classent les photos comme vos preferences",
+        "step3_zero": "Proche de zero (-0.2 a +0.2) = pas assez de donnees ou signaux contradictoires",
+        "step3_negative": "Correlation negative = les poids classent a l'inverse de vos preferences",
+        "step4_title": "4. Appliquer pour sauvegarder, Recalculer pour mettre a jour",
+        "step4_desc": "Cliquez sur \"Appliquer config\" pour sauvegarder les poids, puis \"Recalculer\" pour mettre a jour tous les scores.",
+        "tip": "Faites 30+ comparaisons par categorie pour les suggestions (50+ recommande pour la precision). Melangez les strategies pour une meilleure couverture. Les egalites sont incluses dans l'optimisation."
+      }
+    },
+    "modal": {
+      "title": "Changer de categorie",
+      "photo": "Photo",
+      "current": "Actuelle",
+      "select_category": "Selectionner une nouvelle categorie :",
+      "analyze": "Analyser les conflits de filtre",
+      "apply_override": "Appliquer le remplacement",
+      "no_conflicts": "La photo correspond deja aux filtres de la categorie cible",
+      "filter_conflicts": "Conflits de filtre",
+      "suggested_changes": "Changements de filtre suggeres",
+      "photo_values": "Valeurs de la photo",
+      "cancel": "Annuler"
+    },
+    "confirm": {
+      "reset_title": "Reinitialiser toutes les comparaisons",
+      "reset_body": "Cela supprimera definitivement :\n- {count} comparaisons par paires\n- Toutes les suggestions de poids apprises\n- Toutes les statistiques de session\n\nCette action est irreversible.",
+      "recalculate_title": "Recalculer tous les scores",
+      "recalculate_body": "Cela va :\n- Re-determiner les categories de toutes les photos selon les filtres de config\n- Recalculer les scores agreges avec les poids de categorie actuels\n- Mettre a jour la base de donnees avec les nouveaux scores\n\nPoids de categorie de : {category}\n\nCela peut prendre plusieurs minutes pour les grandes bases.",
+      "apply_title": "Appliquer les poids a la config",
+      "apply_body": "Categorie : {category}\n\nChangements de poids :\n{changes}\n\nCela va :\n- Mettre a jour scoring_config.json avec les nouveaux poids\n- Creer une sauvegarde de la config actuelle\n- NE PAS recalculer les scores existants (utilisez \"Recalculer\" apres)\n\nSauvegarder ces poids ?",
+      "confirm_button": "Confirmer",
+      "cancel_button": "Annuler"
+    },
+    "notify": {
+      "data_reset": "Les donnees de comparaison ont ete reinitialisees.",
+      "recalculate_complete": "Recalcul termine ! Les categories et scores ont ete mis a jour.",
+      "weights_saved": "Poids sauvegardes pour \"{category}\" ! Cliquez sur \"Recalculer\" pour les appliquer a toutes les photos.",
+      "category_changed": "Categorie changee en {category}"
+    },
+    "error": {
+      "load_pair": "Echec du chargement de la paire suivante",
+      "reset_failed": "Erreur lors de la reinitialisation des comparaisons",
+      "recalculate_failed": "Erreur lors du recalcul des scores. Verifiez la console.",
+      "select_category_first": "Veuillez d'abord selectionner une categorie pour appliquer les poids.",
+      "no_weight_changes": "Aucun changement de poids a appliquer.",
+      "save_weights_failed": "Erreur lors de la sauvegarde des poids",
+      "no_suggestions": "Impossible de generer des suggestions",
+      "suggestions_failed": "Erreur lors de la recuperation des suggestions de poids",
+      "category_change_failed": "Echec du changement de categorie",
+      "override_failed": "Erreur lors de l'application du remplacement de categorie",
+      "analyze_failed": "Erreur lors de l'analyse des conflits de filtre"
+    }
   },
   "person_page": {
     "title": "{name} - Facet"
@@ -343,7 +504,9 @@
     "all_reviewed": "Toutes les suggestions de fusion examinees",
     "merged_success": "{count} personnes fusionnees dans {name}",
     "loading": "Calcul des suggestions de fusion...",
-    "load_error": "Echec du chargement des suggestions de fusion"
+    "load_error": "Echec du chargement des suggestions de fusion",
+    "error_self_merge": "Impossible de fusionner une personne avec elle-meme",
+    "person_fallback": "Personne {id}"
   },
   "stats": {
     "title": "Statistiques EXIF",
@@ -459,6 +622,22 @@
     },
     "loading": "Chargement des donnees...",
     "no_data": "Aucune donnee disponible",
-    "back": "Retour a la galerie"
+    "back": "Retour a la galerie",
+    "focal_35mm": "(eq. 35mm)"
+  },
+  "login": {
+    "title": "Connexion",
+    "password_label": "Mot de passe",
+    "placeholder": "Entrez le mot de passe",
+    "submit": "Se connecter",
+    "invalid_password": "Mot de passe invalide"
+  },
+  "edition": {
+    "unlock_title": "Deverrouiller le mode edition",
+    "unlock_description": "Entrez le mot de passe d'edition pour activer les fonctionnalites de modification.",
+    "unlock_button": "Deverrouiller",
+    "lock_title": "Mode edition actif - cliquer pour verrouiller",
+    "password_placeholder": "Mot de passe d'edition",
+    "invalid_password": "Mot de passe invalide"
   }
 }

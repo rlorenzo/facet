@@ -76,7 +76,8 @@ def register_auth_routes(app):
                 session['authenticated'] = True
                 next_url = request.form.get('next', '/')
                 return redirect(next_url)
-            return render_template('login.html', error='Invalid password', next_url=next_url)
+            from i18n import _ as translate
+            return render_template('login.html', error=translate('login.invalid_password'), next_url=next_url)
 
         return render_template('login.html', error=None, next_url=next_url)
 

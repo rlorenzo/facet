@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html class="dark">
+<html lang="{{ lang }}" class="dark">
 <head>
-    <title>Facet</title>
+    <title>{{ _('ui.title') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -230,7 +230,7 @@
                                 {% if params.person %}
                                     {% for id, name, face_id, count in options.persons if id|string == params.person %}
                                     <img src="/person_thumbnail/{{ id }}" class="w-12 h-12 rounded-full object-cover flex-shrink-0" alt="">
-                                    <span class="truncate max-w-[120px]">{{ name or 'Person ' ~ id }}</span>
+                                    <span class="truncate max-w-[120px]">{{ name or _('manage_persons.person_fallback', id=id) }}</span>
                                     {% endfor %}
                                 {% else %}
                                     <span class="truncate">{{ _('ui.filters.all_people') }}</span>
@@ -246,7 +246,7 @@
                                 {% set person_params = params|urlencode_without(['type', 'person']) %}
                                 <a href="?{{ person_params ~ ('&' if person_params else '') }}person={{ id }}" class="flex items-center gap-2 px-3 py-2 hover:bg-neutral-700 text-white text-sm {% if params.person == id|string %}bg-neutral-700{% endif %}">
                                     <img src="/person_thumbnail/{{ id }}" class="w-12 h-12 rounded-full object-cover" alt="" loading="lazy">
-                                    <span class="truncate">{{ name or 'Person ' ~ id }}</span>
+                                    <span class="truncate">{{ name or _('manage_persons.person_fallback', id=id) }}</span>
                                     <span class="text-neutral-500 ml-auto">({{ count }})</span>
                                 </a>
                                 {% endfor %}
@@ -263,7 +263,7 @@
                         </div>
                         {% if params.person and edition_authenticated %}
                         {% for id, name, face_id, count in options.persons if id|string == params.person %}
-                        <button type="button" onclick="renamePerson({{ id }}, '{{ (name or 'Person ' ~ id)|e }}')" class="flex-shrink-0 bg-neutral-800 text-neutral-400 hover:text-white p-1.5 rounded border border-neutral-700 hover:border-neutral-600" title="Rename person">
+                        <button type="button" onclick="renamePerson({{ id }}, '{{ (name or _('manage_persons.person_fallback', id=id))|e }}')" class="flex-shrink-0 bg-neutral-800 text-neutral-400 hover:text-white p-1.5 rounded border border-neutral-700 hover:border-neutral-600" title="{{ _('manage_persons.rename_person') }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
                         {% endfor %}
@@ -339,14 +339,14 @@
 
                 {% if editing_enabled and not edition_authenticated %}
                 <!-- Edition Mode Unlock Button -->
-                <button onclick="showEditionLoginModal()" class="flex-shrink-0 bg-neutral-800 text-neutral-400 hover:text-yellow-400 px-3 py-1.5 rounded border border-neutral-700 hover:border-yellow-500 flex items-center gap-2 text-sm" title="Unlock edition mode">
+                <button onclick="showEditionLoginModal()" class="flex-shrink-0 bg-neutral-800 text-neutral-400 hover:text-yellow-400 px-3 py-1.5 rounded border border-neutral-700 hover:border-yellow-500 flex items-center gap-2 text-sm" title="{{ _('edition.unlock_title') }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                 </button>
                 {% elif edition_authenticated %}
                 <!-- Edition Mode Active Indicator / Logout Button -->
-                <button onclick="editionLogout()" class="flex-shrink-0 bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded border border-yellow-500 flex items-center gap-2 text-sm" title="Edition mode active - click to lock">
+                <button onclick="editionLogout()" class="flex-shrink-0 bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded border border-yellow-500 flex items-center gap-2 text-sm" title="{{ _('edition.lock_title') }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
                     </svg>
@@ -509,70 +509,70 @@
                     <div class="mt-3 space-y-3">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Aggregate</label>
+                                <label class="filter-label">{{ _('drawer.fields.min_aggregate') }}</label>
                                 <input type="number" step="0.1" name="min_score" class="filter-input" value="{{ params.min_score or '' }}" placeholder="0">
                             </div>
                             <div>
-                                <label class="filter-label">Max Aggregate</label>
+                                <label class="filter-label">{{ _('drawer.fields.max_aggregate') }}</label>
                                 <input type="number" step="0.1" name="max_score" class="filter-input" value="{{ params.max_score or '' }}" placeholder="10">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Aesthetic</label>
-                                <input type="number" step="0.1" name="min_aesthetic" class="filter-input" value="{{ params.min_aesthetic or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_aesthetic') }}</label>
+                                <input type="number" step="0.1" name="min_aesthetic" class="filter-input" value="{{ params.min_aesthetic or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Aesthetic</label>
-                                <input type="number" step="0.1" name="max_aesthetic" class="filter-input" value="{{ params.max_aesthetic or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Sharpness</label>
-                                <input type="number" step="0.1" name="min_sharpness" class="filter-input" value="{{ params.min_sharpness or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Sharpness</label>
-                                <input type="number" step="0.1" name="max_sharpness" class="filter-input" value="{{ params.max_sharpness or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_aesthetic') }}</label>
+                                <input type="number" step="0.1" name="max_aesthetic" class="filter-input" value="{{ params.max_aesthetic or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Exposure</label>
-                                <input type="number" step="0.1" name="min_exposure" class="filter-input" value="{{ params.min_exposure or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_sharpness') }}</label>
+                                <input type="number" step="0.1" name="min_sharpness" class="filter-input" value="{{ params.min_sharpness or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Exposure</label>
-                                <input type="number" step="0.1" name="max_exposure" class="filter-input" value="{{ params.max_exposure or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Color</label>
-                                <input type="number" step="0.1" name="min_color" class="filter-input" value="{{ params.min_color or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Color</label>
-                                <input type="number" step="0.1" name="max_color" class="filter-input" value="{{ params.max_color or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_sharpness') }}</label>
+                                <input type="number" step="0.1" name="max_sharpness" class="filter-input" value="{{ params.max_sharpness or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Composition</label>
-                                <input type="number" step="0.1" name="min_composition" class="filter-input" value="{{ params.min_composition or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_exposure') }}</label>
+                                <input type="number" step="0.1" name="min_exposure" class="filter-input" value="{{ params.min_exposure or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Composition</label>
-                                <input type="number" step="0.1" name="max_composition" class="filter-input" value="{{ params.max_composition or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_exposure') }}</label>
+                                <input type="number" step="0.1" name="max_exposure" class="filter-input" value="{{ params.max_exposure or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_color') }}</label>
+                                <input type="number" step="0.1" name="min_color" class="filter-input" value="{{ params.min_color or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_color') }}</label>
+                                <input type="number" step="0.1" name="max_color" class="filter-input" value="{{ params.max_color or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_composition') }}</label>
+                                <input type="number" step="0.1" name="min_composition" class="filter-input" value="{{ params.min_composition or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_composition') }}</label>
+                                <input type="number" step="0.1" name="max_composition" class="filter-input" value="{{ params.max_composition or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <!-- Composition Pattern Filter (SAMP-Net) -->
                         {% if options.composition_patterns %}
                         <div class="mt-3">
-                            <label class="filter-label">Composition Pattern</label>
+                            <label class="filter-label">{{ _('drawer.sections.composition_pattern') }}</label>
                             <select name="composition_pattern" class="filter-input w-full">
-                                <option value="">All Patterns</option>
+                                <option value="">{{ _('ui.filters.all_patterns') }}</option>
                                 {% for pattern, count in options.composition_patterns %}
                                 <option value="{{ pattern }}" {% if params.composition_pattern == pattern %}selected{% endif %}>{{ pattern|replace('_', ' ')|title }} ({{ count }})</option>
                                 {% endfor %}
@@ -593,52 +593,52 @@
                     <div class="mt-3 space-y-3">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Faces</label>
-                                <input type="number" name="min_face_count" class="filter-input" value="{{ params.min_face_count or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_faces') }}</label>
+                                <input type="number" name="min_face_count" class="filter-input" value="{{ params.min_face_count or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Faces</label>
-                                <input type="number" name="max_face_count" class="filter-input" value="{{ params.max_face_count or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Face Quality</label>
-                                <input type="number" step="0.1" name="min_face_quality" class="filter-input" value="{{ params.min_face_quality or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Face Quality</label>
-                                <input type="number" step="0.1" name="max_face_quality" class="filter-input" value="{{ params.max_face_quality or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_faces') }}</label>
+                                <input type="number" name="max_face_count" class="filter-input" value="{{ params.max_face_count or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Eye Sharpness</label>
-                                <input type="number" step="0.1" name="min_eye_sharpness" class="filter-input" value="{{ params.min_eye_sharpness or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_face_quality') }}</label>
+                                <input type="number" step="0.1" name="min_face_quality" class="filter-input" value="{{ params.min_face_quality or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Eye Sharpness</label>
-                                <input type="number" step="0.1" name="max_eye_sharpness" class="filter-input" value="{{ params.max_eye_sharpness or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Face Ratio</label>
-                                <input type="number" step="0.01" name="min_face_ratio" class="filter-input" value="{{ params.min_face_ratio or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Face Ratio</label>
-                                <input type="number" step="0.01" name="max_face_ratio" class="filter-input" value="{{ params.max_face_ratio or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_face_quality') }}</label>
+                                <input type="number" step="0.1" name="max_face_quality" class="filter-input" value="{{ params.max_face_quality or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Face Sharpness</label>
-                                <input type="number" step="0.1" name="min_face_sharpness" class="filter-input" value="{{ params.min_face_sharpness or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_eye_sharpness') }}</label>
+                                <input type="number" step="0.1" name="min_eye_sharpness" class="filter-input" value="{{ params.min_eye_sharpness or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Face Sharpness</label>
-                                <input type="number" step="0.1" name="max_face_sharpness" class="filter-input" value="{{ params.max_face_sharpness or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_eye_sharpness') }}</label>
+                                <input type="number" step="0.1" name="max_eye_sharpness" class="filter-input" value="{{ params.max_eye_sharpness or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_face_ratio') }}</label>
+                                <input type="number" step="0.01" name="min_face_ratio" class="filter-input" value="{{ params.min_face_ratio or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_face_ratio') }}</label>
+                                <input type="number" step="0.01" name="max_face_ratio" class="filter-input" value="{{ params.max_face_ratio or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_face_sharpness') }}</label>
+                                <input type="number" step="0.1" name="min_face_sharpness" class="filter-input" value="{{ params.min_face_sharpness or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_face_sharpness') }}</label>
+                                <input type="number" step="0.1" name="max_face_sharpness" class="filter-input" value="{{ params.max_face_sharpness or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                     </div>
@@ -655,72 +655,72 @@
                     <div class="mt-3 space-y-3">
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Dynamic Range</label>
-                                <input type="number" step="0.1" name="min_dynamic_range" class="filter-input" value="{{ params.min_dynamic_range or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_dynamic_range') }}</label>
+                                <input type="number" step="0.1" name="min_dynamic_range" class="filter-input" value="{{ params.min_dynamic_range or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Dynamic Range</label>
-                                <input type="number" step="0.1" name="max_dynamic_range" class="filter-input" value="{{ params.max_dynamic_range or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Contrast</label>
-                                <input type="number" step="0.1" name="min_contrast" class="filter-input" value="{{ params.min_contrast or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Contrast</label>
-                                <input type="number" step="0.1" name="max_contrast" class="filter-input" value="{{ params.max_contrast or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_dynamic_range') }}</label>
+                                <input type="number" step="0.1" name="max_dynamic_range" class="filter-input" value="{{ params.max_dynamic_range or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Noise</label>
-                                <input type="number" step="0.1" name="min_noise" class="filter-input" value="{{ params.min_noise or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_contrast') }}</label>
+                                <input type="number" step="0.1" name="min_contrast" class="filter-input" value="{{ params.min_contrast or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Noise</label>
-                                <input type="number" step="0.1" name="max_noise" class="filter-input" value="{{ params.max_noise or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Isolation</label>
-                                <input type="number" step="0.1" name="min_isolation" class="filter-input" value="{{ params.min_isolation or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Isolation</label>
-                                <input type="number" step="0.1" name="max_isolation" class="filter-input" value="{{ params.max_isolation or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_contrast') }}</label>
+                                <input type="number" step="0.1" name="max_contrast" class="filter-input" value="{{ params.max_contrast or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Luminance</label>
-                                <input type="number" step="0.01" name="min_luminance" class="filter-input" value="{{ params.min_luminance or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_noise') }}</label>
+                                <input type="number" step="0.1" name="min_noise" class="filter-input" value="{{ params.min_noise or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Luminance</label>
-                                <input type="number" step="0.01" name="max_luminance" class="filter-input" value="{{ params.max_luminance or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min Hist Spread</label>
-                                <input type="number" step="0.01" name="min_histogram_spread" class="filter-input" value="{{ params.min_histogram_spread or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max Hist Spread</label>
-                                <input type="number" step="0.01" name="max_histogram_spread" class="filter-input" value="{{ params.max_histogram_spread or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_noise') }}</label>
+                                <input type="number" step="0.1" name="max_noise" class="filter-input" value="{{ params.max_noise or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Power Point</label>
-                                <input type="number" step="0.1" name="min_power_point" class="filter-input" value="{{ params.min_power_point or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_isolation') }}</label>
+                                <input type="number" step="0.1" name="min_isolation" class="filter-input" value="{{ params.min_isolation or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Power Point</label>
-                                <input type="number" step="0.1" name="max_power_point" class="filter-input" value="{{ params.max_power_point or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_isolation') }}</label>
+                                <input type="number" step="0.1" name="max_isolation" class="filter-input" value="{{ params.max_isolation or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_luminance') }}</label>
+                                <input type="number" step="0.01" name="min_luminance" class="filter-input" value="{{ params.min_luminance or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_luminance') }}</label>
+                                <input type="number" step="0.01" name="max_luminance" class="filter-input" value="{{ params.max_luminance or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_hist_spread') }}</label>
+                                <input type="number" step="0.01" name="min_histogram_spread" class="filter-input" value="{{ params.min_histogram_spread or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_hist_spread') }}</label>
+                                <input type="number" step="0.01" name="max_histogram_spread" class="filter-input" value="{{ params.max_histogram_spread or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_power_point') }}</label>
+                                <input type="number" step="0.1" name="min_power_point" class="filter-input" value="{{ params.min_power_point or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_power_point') }}</label>
+                                <input type="number" step="0.1" name="max_power_point" class="filter-input" value="{{ params.max_power_point or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                     </div>
@@ -736,18 +736,18 @@
                     </summary>
                     <div class="mt-3 space-y-3">
                         <div>
-                            <label class="filter-label">Camera</label>
+                            <label class="filter-label">{{ _('drawer.fields.camera') }}</label>
                             <select name="camera" class="filter-input">
-                                <option value="">All Cameras</option>
+                                <option value="">{{ _('ui.filters.all_cameras') }}</option>
                                 {% for cam in options.cameras %}
                                 <option value="{{ cam }}" {% if params.camera == cam %}selected{% endif %}>{{ cam }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div>
-                            <label class="filter-label">Lens</label>
+                            <label class="filter-label">{{ _('drawer.fields.lens') }}</label>
                             <select name="lens" class="filter-input">
-                                <option value="">All Lenses</option>
+                                <option value="">{{ _('ui.filters.all_lenses') }}</option>
                                 {% for l in options.lenses %}
                                 <option value="{{ l }}" {% if params.lens == l %}selected{% endif %}>{{ l }}</option>
                                 {% endfor %}
@@ -755,32 +755,32 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min ISO</label>
-                                <input type="number" name="min_iso" class="filter-input" value="{{ params.min_iso or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_iso') }}</label>
+                                <input type="number" name="min_iso" class="filter-input" value="{{ params.min_iso or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max ISO</label>
-                                <input type="number" name="max_iso" class="filter-input" value="{{ params.max_iso or '' }}" placeholder="Any">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="filter-label">Min F-Stop</label>
-                                <input type="number" step="0.1" name="min_fstop" class="filter-input" value="{{ params.min_fstop or '' }}" placeholder="Any">
-                            </div>
-                            <div>
-                                <label class="filter-label">Max F-Stop</label>
-                                <input type="number" step="0.1" name="max_fstop" class="filter-input" value="{{ params.max_fstop or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_iso') }}</label>
+                                <input type="number" name="max_iso" class="filter-input" value="{{ params.max_iso or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="filter-label">Min Focal (mm)</label>
-                                <input type="number" name="min_focal" class="filter-input" value="{{ params.min_focal or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.min_fstop') }}</label>
+                                <input type="number" step="0.1" name="min_fstop" class="filter-input" value="{{ params.min_fstop or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                             <div>
-                                <label class="filter-label">Max Focal (mm)</label>
-                                <input type="number" name="max_focal" class="filter-input" value="{{ params.max_focal or '' }}" placeholder="Any">
+                                <label class="filter-label">{{ _('drawer.fields.max_fstop') }}</label>
+                                <input type="number" step="0.1" name="max_fstop" class="filter-input" value="{{ params.max_fstop or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.min_focal') }}</label>
+                                <input type="number" name="min_focal" class="filter-input" value="{{ params.min_focal or '' }}" placeholder="{{ _('drawer.placeholder') }}">
+                            </div>
+                            <div>
+                                <label class="filter-label">{{ _('drawer.fields.max_focal') }}</label>
+                                <input type="number" name="max_focal" class="filter-input" value="{{ params.max_focal or '' }}" placeholder="{{ _('drawer.placeholder') }}">
                             </div>
                         </div>
                     </div>
@@ -808,7 +808,7 @@
             {% for p in photos %}
             <div class="photo-card group bg-neutral-900 flex flex-col gap-1 rounded border border-neutral-800 p-1.5 hover:border-green-500 transition-all w-full sm:w-auto" style="--card-width: {{ viewer_config.display.card_width_px }}px; --image-width: {{ viewer_config.display.image_width_px }}px" data-path="{{ p['path'] | urlencode }}">
                 <!-- Thumbnail -->
-                <div class="photo-thumb-container flex-initial relative" onclick="toggleSelection(this, '{{ p['filename'] | js_escape }}', '{{ p['path'] | js_escape }}')" data-tooltip="{{ p['filename'] }}&#10;{{ p['date_taken'] | format_date }}&#10;[{{ p['category'] | default('others') | title }}] Aggregate: {{ p['aggregate'] | safe_float(1) }}&#10;&#10;── Quality ──&#10;Aesthetic: {{ p['aesthetic'] | safe_float(1) }}{% if p['quality_score'] %}&#10;Quality: {{ p['quality_score'] | safe_float(1) }}{% endif %}{% if p['face_count'] > 0 %}&#10;Face Quality: {{ p['face_quality'] | safe_float(1) }}&#10;Face Sharpness: {{ p['face_sharpness'] | safe_float(1) }}&#10;Eye Sharpness: {{ p['eye_sharpness'] | safe_float(1) }}{% endif %}&#10;Tech Sharpness: {{ p['tech_sharpness'] | safe_float(1) }}&#10;&#10;── Composition ──&#10;Composition: {{ p['comp_score'] | safe_float(1) }}{% if p['composition_pattern'] %}&#10;Pattern: {{ p['composition_pattern'] | replace('_', ' ') | title }}{% endif %}{% if p['power_point_score'] %}&#10;Power Points: {{ p['power_point_score'] | safe_float(1) }}{% endif %}{% if p['leading_lines_score'] %}&#10;Leading Lines: {{ p['leading_lines_score'] | safe_float(1) }}{% endif %}&#10;&#10;── Technical ──&#10;Exposure: {{ p['exposure_score'] | safe_float(1) }}&#10;Color: {{ p['color_score'] | safe_float(1) }}{% if p['contrast_score'] %}&#10;Contrast: {{ p['contrast_score'] | safe_float(1) }}{% endif %}{% if p['dynamic_range_stops'] %}&#10;Dynamic Range: {{ p['dynamic_range_stops'] | safe_float(1) }}{% endif %}{% if p['mean_saturation'] %}&#10;Saturation: {{ p['mean_saturation'] | safe_float(1) }}{% endif %}{% if p['noise_sigma'] %}&#10;Noise: {{ p['noise_sigma'] | safe_float(1) }}{% endif %}&#10;&#10;── EXIF ──{% if p['camera_model'] %}&#10;Camera: {{ p['camera_model'] }}{% endif %}{% if p['lens_model'] %}&#10;Lens: {{ p['lens_model'] }}{% endif %}&#10;Focal: {{ p['focal_length'] or '?' }}mm&#10;Shutter: {{ p['shutter_speed'] | format_shutter }}&#10;ISO: {{ p['iso'] or '?' }}{% if p['isolation_bonus'] and p['isolation_bonus'] > 1.0 %}&#10;&#10;── Bonus ──&#10;Isolation: {{ p['isolation_bonus'] | safe_float(1) }}{% endif %}">
+                <div class="photo-thumb-container flex-initial relative" onclick="toggleSelection(this, '{{ p['filename'] | js_escape }}', '{{ p['path'] | js_escape }}')" data-tooltip="{{ p['filename'] }}&#10;{{ p['date_taken'] | format_date }}&#10;[{{ p['category'] | default('others') | title }}] {{ _('tooltip.aggregate') }}: {{ p['aggregate'] | safe_float(1) }}&#10;&#10;── {{ _('tooltip.quality_section') }} ──&#10;{{ _('tooltip.aesthetic') }}: {{ p['aesthetic'] | safe_float(1) }}{% if p['quality_score'] %}&#10;{{ _('tooltip.quality_score') }}: {{ p['quality_score'] | safe_float(1) }}{% endif %}{% if p['face_count'] > 0 %}&#10;{{ _('tooltip.face_quality') }}: {{ p['face_quality'] | safe_float(1) }}&#10;{{ _('tooltip.face_sharpness') }}: {{ p['face_sharpness'] | safe_float(1) }}&#10;{{ _('tooltip.eye_sharpness') }}: {{ p['eye_sharpness'] | safe_float(1) }}{% endif %}&#10;{{ _('tooltip.tech_sharpness') }}: {{ p['tech_sharpness'] | safe_float(1) }}&#10;&#10;── {{ _('tooltip.composition_section') }} ──&#10;{{ _('tooltip.composition') }}: {{ p['comp_score'] | safe_float(1) }}{% if p['composition_pattern'] %}&#10;{{ _('tooltip.pattern') }}: {{ p['composition_pattern'] | replace('_', ' ') | title }}{% endif %}{% if p['power_point_score'] %}&#10;{{ _('tooltip.power_points') }}: {{ p['power_point_score'] | safe_float(1) }}{% endif %}{% if p['leading_lines_score'] %}&#10;{{ _('tooltip.leading_lines') }}: {{ p['leading_lines_score'] | safe_float(1) }}{% endif %}&#10;&#10;── {{ _('tooltip.technical_section') }} ──&#10;{{ _('tooltip.exposure') }}: {{ p['exposure_score'] | safe_float(1) }}&#10;{{ _('tooltip.color') }}: {{ p['color_score'] | safe_float(1) }}{% if p['contrast_score'] %}&#10;{{ _('tooltip.contrast') }}: {{ p['contrast_score'] | safe_float(1) }}{% endif %}{% if p['dynamic_range_stops'] %}&#10;{{ _('tooltip.dynamic_range') }}: {{ p['dynamic_range_stops'] | safe_float(1) }}{% endif %}{% if p['mean_saturation'] %}&#10;{{ _('tooltip.saturation') }}: {{ p['mean_saturation'] | safe_float(1) }}{% endif %}{% if p['noise_sigma'] %}&#10;{{ _('tooltip.noise') }}: {{ p['noise_sigma'] | safe_float(1) }}{% endif %}&#10;&#10;── {{ _('tooltip.exif_section') }} ──{% if p['camera_model'] %}&#10;{{ _('tooltip.camera') }}: {{ p['camera_model'] }}{% endif %}{% if p['lens_model'] %}&#10;{{ _('tooltip.lens') }}: {{ p['lens_model'] }}{% endif %}&#10;{{ _('tooltip.focal') }}: {{ p['focal_length'] or '?' }}mm&#10;{{ _('tooltip.shutter') }}: {{ p['shutter_speed'] | format_shutter }}&#10;{{ _('tooltip.iso') }}: {{ p['iso'] or '?' }}{% if p['isolation_bonus'] and p['isolation_bonus'] > 1.0 %}&#10;&#10;── {{ _('tooltip.bonus_section') }} ──&#10;{{ _('tooltip.isolation') }}: {{ p['isolation_bonus'] | safe_float(1) }}{% endif %}">
                     <img
                         src="/thumbnail?path={{ p['path'] | urlencode }}&size=640"
                         loading="lazy"
@@ -827,7 +827,7 @@
                     {% if edition_authenticated and p['face_count'] > 0 and not params.person %}
                     <button onclick="event.stopPropagation(); showAssignFaceModal('{{ p['path'] | js_escape }}')"
                             class="assign-face-btn opacity-0 group-hover:opacity-100 absolute top-1 left-1 w-6 h-6 bg-blue-600 hover:bg-blue-500 rounded-full flex items-center justify-center text-white transition-opacity z-10"
-                            title="Assign face to person">
+                            title="{{ _('manage_persons.assign_face') }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                         </svg>
@@ -851,7 +851,7 @@
                             {% for i in range(1, 6) %}
                             <button onclick="event.stopPropagation(); setRating('{{ p['path'] | js_escape }}', {{ i }}, this.parentElement)"
                                     class="star-btn text-sm {% if p['star_rating'] and p['star_rating'] >= i %}text-yellow-400{% else %}text-neutral-500 hover:text-yellow-400{% endif %} transition-colors"
-                                    title="{{ i }} star{% if i > 1 %}s{% endif %}">★</button>
+                                    title="{{ _('rating.set_rating') }}">★</button>
                             {% endfor %}
                         </div>
                         <!-- Favorite toggle -->
@@ -888,7 +888,7 @@
                             {% else %}
                             <span class="text-green-400 font-bold text-base">{{ p[sort_col] | safe_float(1) }}</span>
                             {% endif %}
-                            <span>{% if p['is_favorite'] %}<span class="text-[10px] font-medium text-red-400 mr-0.5" title="{{ _('rating.favorite') }}">❤</span>{% endif %}{% if p['is_rejected'] %}<span class="text-[10px] font-medium bg-red-900 text-red-400 px-1 rounded mr-0.5">REJ</span>{% endif %}{% if p['star_rating'] and p['star_rating'] > 0 %}<span class="text-[10px] font-medium text-yellow-400 mr-0.5">{% for _ in range(p['star_rating']) %}★{% endfor %}</span>{% endif %}{% if p['is_burst_lead'] %}<span class="text-[10px] font-medium bg-green-900 text-green-400 px-1 rounded">{{ _('ui.badges.best') }}</span>{% endif %}{% if p['is_blink'] %} <span class="text-[10px] font-medium bg-amber-900 text-amber-400 px-1 rounded">{{ _('ui.badges.blink') }}</span>{% endif %}{% if p['is_monochrome'] %} <span class="text-[10px] font-medium bg-neutral-700 text-neutral-400 px-1 rounded">{{ _('ui.badges.bw') }}</span>{% endif %}</span>
+                            <span>{% if p['is_favorite'] %}<span class="text-[10px] font-medium text-red-400 mr-0.5" title="{{ _('rating.favorite') }}">❤</span>{% endif %}{% if p['is_rejected'] %}<span class="text-[10px] font-medium bg-red-900 text-red-400 px-1 rounded mr-0.5">{{ _('ui.badges.rejected') }}</span>{% endif %}{% if p['star_rating'] and p['star_rating'] > 0 %}<span class="text-[10px] font-medium text-yellow-400 mr-0.5">{% for _ in range(p['star_rating']) %}★{% endfor %}</span>{% endif %}{% if p['is_burst_lead'] %}<span class="text-[10px] font-medium bg-green-900 text-green-400 px-1 rounded">{{ _('ui.badges.best') }}</span>{% endif %}{% if p['is_blink'] %} <span class="text-[10px] font-medium bg-amber-900 text-amber-400 px-1 rounded">{{ _('ui.badges.blink') }}</span>{% endif %}{% if p['is_monochrome'] %} <span class="text-[10px] font-medium bg-neutral-700 text-neutral-400 px-1 rounded">{{ _('ui.badges.bw') }}</span>{% endif %}</span>
                         </div>
                         {% if sort_col not in ['aggregate', 'date_taken'] %}
                         <div class="text-[10px] text-neutral-500 -mt-0.5">{{ sort_label }}</div>
@@ -923,7 +923,7 @@
                         {% if edition_authenticated and params.person %}
                         <button onclick="event.stopPropagation(); removePersonFromPhoto('{{ p['path'] | js_escape }}', {{ params.person }})"
                                 class="remove-person-btn w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-white"
-                                title="Remove person from this photo">
+                                title="{{ _('manage_persons.remove_person_title') }}">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -990,9 +990,17 @@
         </button>
     </div>
 
-    <!-- Copy Notification -->
-    <div id="copy-notification" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
-        <span id="copy-notification-text">Copied!</span>
+    <!-- Toast notification -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toast-container" class="flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset">
+            <svg id="toast-icon-success" class="h-5 w-5 flex-shrink-0 text-green-400 hidden" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/>
+            </svg>
+            <svg id="toast-icon-error" class="h-5 w-5 flex-shrink-0 text-red-400 hidden" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+            </svg>
+            <p id="toast-text" class="text-sm font-medium"></p>
+        </div>
     </div>
 
     <!-- Fixed loading spinner (bottom-right) -->
@@ -1010,7 +1018,7 @@
     <!-- Face Selection Modal (for selecting which face to assign) -->
     <div id="select-face-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
         <div class="bg-neutral-900 rounded-lg p-6 max-w-2xl w-full mx-4 border border-neutral-700">
-            <h3 class="text-lg font-semibold mb-4">{{ _('manage_persons.select_face') or 'Select face to assign' }}</h3>
+            <h3 class="text-lg font-semibold mb-4">{{ _('manage_persons.select_face') }}</h3>
             <div id="select-face-grid" class="grid grid-cols-4 gap-3 mb-4 max-h-80 overflow-y-auto">
                 <!-- Dynamically populated with face thumbnails -->
             </div>
@@ -1065,10 +1073,10 @@
     <!-- Edition Login Modal -->
     <div id="edition-login-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
         <div class="bg-neutral-900 rounded-lg p-6 max-w-sm w-full mx-4 border border-neutral-700">
-            <h3 class="text-lg font-semibold mb-2">Unlock Edition Mode</h3>
-            <p class="text-sm text-neutral-400 mb-4">Enter the edition password to enable editing features.</p>
+            <h3 class="text-lg font-semibold mb-2">{{ _('edition.unlock_title') }}</h3>
+            <p class="text-sm text-neutral-400 mb-4">{{ _('edition.unlock_description') }}</p>
             <form onsubmit="return submitEditionLogin(event)">
-                <input type="password" id="edition-password" placeholder="Edition password"
+                <input type="password" id="edition-password" placeholder="{{ _('edition.password_placeholder') }}"
                        class="w-full bg-neutral-800 text-white px-3 py-2 rounded border border-neutral-700 mb-3 focus:border-yellow-500 focus:outline-none"
                        autocomplete="current-password">
                 <div id="edition-login-error" class="hidden text-red-400 text-sm mb-3"></div>
@@ -1077,7 +1085,7 @@
                         {{ _('ui.buttons.cancel') }}
                     </button>
                     <button type="submit" class="flex-1 bg-yellow-600 hover:bg-yellow-500 py-2 rounded transition-colors font-medium">
-                        Unlock
+                        {{ _('edition.unlock_button') }}
                     </button>
                 </div>
             </form>
@@ -1088,7 +1096,7 @@
     <!-- JavaScript -->
     <script>
         // i18n translations
-        const I18N = {{ js_translations(['manage_persons', 'notifications', 'ui', 'similar', 'rating']) | tojson | safe }};
+        const I18N = {{ js_translations(['manage_persons', 'notifications', 'ui', 'similar', 'rating', 'edition', 'tooltip']) | tojson | safe }};
         const FEATURES = {{ viewer_config.features | tojson | safe }};
         const EDITION_AUTHENTICATED = {{ edition_authenticated | tojson }};
         const currentPersonFilter = {{ params.person|tojson if params.person else 'null' }};
@@ -1178,12 +1186,12 @@
                     // Reload page to show edition features
                     window.location.reload();
                 } else {
-                    errorEl.textContent = data.error || 'Invalid password';
+                    errorEl.textContent = data.error || t('edition.invalid_password');
                     errorEl.classList.remove('hidden');
                 }
             })
             .catch(err => {
-                errorEl.textContent = 'Connection error';
+                errorEl.textContent = t('notifications.connection_error');
                 errorEl.classList.remove('hidden');
             });
 
@@ -1212,7 +1220,7 @@
 
         // Rename person function
         function renamePerson(personId, currentName) {
-            const newName = prompt('Enter new name for this person:', currentName);
+            const newName = prompt(t('manage_persons.enter_new_name'), currentName);
             if (newName !== null && newName.trim() !== currentName) {
                 const formData = new FormData();
                 formData.append('name', newName.trim());
@@ -1224,13 +1232,13 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showNotification('Person renamed to "' + data.name + '"');
+                        showToast(t('notifications.person_renamed', {name: data.name}));
                         location.reload();
                     } else {
-                        showNotification('Failed to rename person');
+                        showToast(t('notifications.failed_rename'), true);
                     }
                 })
-                .catch(() => showNotification('Failed to rename person'));
+                .catch(() => showToast(t('notifications.failed_rename'), true));
             }
         }
 
@@ -1299,7 +1307,7 @@
             const filenames = Array.from(selectedPhotos.keys()).join('\\n');
             navigator.clipboard.writeText(filenames).then(function() {
                 const count = selectedPhotos.size;
-                showNotification('Copied ' + count + ' filename' + (count > 1 ? 's' : ''));
+                showToast(t(count > 1 ? 'notifications.copied_count_plural' : 'notifications.copied_count', {count: count}));
             }).catch(function(err) {
                 console.error('Failed to copy: ', err);
             });
@@ -1311,13 +1319,13 @@
 
             const paths = Array.from(selectedPhotos.values()).map(function(d) { return d.path; });
             const count = paths.length;
-            showNotification('Downloading ' + count + ' photo' + (count > 1 ? 's' : '') + '...');
+            showToast(t(count > 1 ? 'notifications.downloading_count_plural' : 'notifications.downloading_count', {count: count}));
 
             // Download files sequentially with small delay to avoid browser blocking
             let index = 0;
             function downloadNext() {
                 if (index >= paths.length) {
-                    showNotification('Downloaded ' + count + ' photo' + (count > 1 ? 's' : ''));
+                    showToast(t(count > 1 ? 'notifications.downloaded_count_plural' : 'notifications.downloaded_count', {count: count}));
                     return;
                 }
                 const path = paths[index];
@@ -1332,7 +1340,7 @@
                 if (index < paths.length) {
                     setTimeout(downloadNext, 300);
                 } else {
-                    showNotification('Downloaded ' + count + ' photo' + (count > 1 ? 's' : ''));
+                    showToast(t(count > 1 ? 'notifications.downloaded_count_plural' : 'notifications.downloaded_count', {count: count}));
                 }
             }
             downloadNext();
@@ -1351,19 +1359,28 @@
             updateToolbar();
         }
 
-        function showNotification(message) {
-            const notification = document.getElementById('copy-notification');
-            const text = document.getElementById('copy-notification-text');
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const container = document.getElementById('toast-container');
+            const text = document.getElementById('toast-text');
+            const iconSuccess = document.getElementById('toast-icon-success');
+            const iconError = document.getElementById('toast-icon-error');
+
             text.textContent = message;
+            if (isError) {
+                container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset bg-red-900 text-red-200 ring-red-700/50';
+                iconSuccess.classList.add('hidden');
+                iconError.classList.remove('hidden');
+            } else {
+                container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset bg-green-900 text-green-200 ring-green-700/50';
+                iconError.classList.add('hidden');
+                iconSuccess.classList.remove('hidden');
+            }
 
-            // Show notification
-            notification.classList.remove('translate-y-20', 'opacity-0');
-            notification.classList.add('translate-y-0', 'opacity-100');
-
-            // Hide after configurable duration
-            setTimeout(function() {
-                notification.classList.remove('translate-y-0', 'opacity-100');
-                notification.classList.add('translate-y-20', 'opacity-0');
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            if (toast._hideTimer) clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
             }, {{ viewer_config.notification_duration_ms }});
         }
 
@@ -1473,52 +1490,52 @@
                 const starRating = p.star_rating || 0;
                 const starBadge = starRating > 0 ? `<span class="text-[10px] font-medium text-yellow-400 mr-0.5">${'★'.repeat(starRating)}</span>` : '';
                 const favBadge = p.is_favorite ? `<span class="text-[10px] font-medium text-red-400 mr-0.5" title="${t('rating.favorite')}">❤</span>` : '';
-                const rejBadge = p.is_rejected ? '<span class="text-[10px] font-medium bg-red-900 text-red-400 px-1 rounded mr-0.5">REJ</span>' : '';
+                const rejBadge = p.is_rejected ? `<span class="text-[10px] font-medium bg-red-900 text-red-400 px-1 rounded mr-0.5">${t('ui.badges.rejected')}</span>` : '';
 
                 const badges = [
                     favBadge,
                     rejBadge,
                     starBadge,
-                    p.is_burst_lead ? '<span class="text-[10px] font-medium bg-green-900 text-green-400 px-1 rounded">BEST</span>' : '',
-                    p.is_blink ? '<span class="text-[10px] font-medium bg-amber-900 text-amber-400 px-1 rounded">BLINK</span>' : '',
+                    p.is_burst_lead ? `<span class="text-[10px] font-medium bg-green-900 text-green-400 px-1 rounded">${t('ui.badges.best')}</span>` : '',
+                    p.is_blink ? `<span class="text-[10px] font-medium bg-amber-900 text-amber-400 px-1 rounded">${t('ui.badges.blink')}</span>` : '',
                     (p.duplicate_group_id && !p.is_duplicate_lead) ? `<span class="text-[10px] font-medium bg-purple-900 text-purple-400 px-1 rounded">${t('ui.badges.dup')}</span>` : '',
-                    p.is_monochrome ? '<span class="text-[10px] font-medium bg-neutral-700 text-neutral-400 px-1 rounded">B&W</span>' : ''
+                    p.is_monochrome ? `<span class="text-[10px] font-medium bg-neutral-700 text-neutral-400 px-1 rounded">${t('ui.badges.bw')}</span>` : ''
                 ].filter(b => b).join(' ');
 
                 // Build tooltip with all scoring properties
                 const category = (p.category || 'others').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                let tooltip = `${p.filename}&#10;${p.date_formatted || ''}&#10;[${category}] Aggregate: ${safeFloat(p.aggregate, 1)}&#10;&#10;── Quality ──&#10;Aesthetic: ${safeFloat(p.aesthetic, 1)}`;
-                if (p.quality_score) tooltip += `&#10;Quality: ${safeFloat(p.quality_score, 1)}`;
+                let tooltip = `${p.filename}&#10;${p.date_formatted || ''}&#10;[${category}] ${t('tooltip.aggregate')}: ${safeFloat(p.aggregate, 1)}&#10;&#10;── ${t('tooltip.quality_section')} ──&#10;${t('tooltip.aesthetic')}: ${safeFloat(p.aesthetic, 1)}`;
+                if (p.quality_score) tooltip += `&#10;${t('tooltip.quality_score')}: ${safeFloat(p.quality_score, 1)}`;
                 if (p.face_count > 0) {
-                    tooltip += `&#10;Face Quality: ${safeFloat(p.face_quality, 1)}`;
-                    tooltip += `&#10;Face Sharpness: ${safeFloat(p.face_sharpness, 1)}`;
-                    tooltip += `&#10;Eye Sharpness: ${safeFloat(p.eye_sharpness, 1)}`;
+                    tooltip += `&#10;${t('tooltip.face_quality')}: ${safeFloat(p.face_quality, 1)}`;
+                    tooltip += `&#10;${t('tooltip.face_sharpness')}: ${safeFloat(p.face_sharpness, 1)}`;
+                    tooltip += `&#10;${t('tooltip.eye_sharpness')}: ${safeFloat(p.eye_sharpness, 1)}`;
                 }
-                tooltip += `&#10;Tech Sharpness: ${safeFloat(p.tech_sharpness, 1)}`;
-                tooltip += `&#10;&#10;── Composition ──&#10;Composition: ${safeFloat(p.comp_score, 1)}`;
-                if (p.composition_pattern) tooltip += `&#10;Pattern: ${p.composition_pattern.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
-                if (p.power_point_score) tooltip += `&#10;Power Points: ${safeFloat(p.power_point_score, 1)}`;
-                if (p.leading_lines_score) tooltip += `&#10;Leading Lines: ${safeFloat(p.leading_lines_score, 1)}`;
-                tooltip += `&#10;&#10;── Technical ──&#10;Exposure: ${safeFloat(p.exposure_score, 1)}&#10;Color: ${safeFloat(p.color_score, 1)}`;
-                if (p.contrast_score) tooltip += `&#10;Contrast: ${safeFloat(p.contrast_score, 1)}`;
-                if (p.dynamic_range_stops) tooltip += `&#10;Dynamic Range: ${safeFloat(p.dynamic_range_stops, 1)}`;
-                if (p.mean_saturation) tooltip += `&#10;Saturation: ${safeFloat(p.mean_saturation, 1)}`;
-                if (p.noise_sigma) tooltip += `&#10;Noise: ${safeFloat(p.noise_sigma, 1)}`;
-                tooltip += `&#10;&#10;── EXIF ──`;
-                if (p.camera_model) tooltip += `&#10;Camera: ${p.camera_model}`;
-                if (p.lens_model) tooltip += `&#10;Lens: ${p.lens_model}`;
-                tooltip += `&#10;Focal: ${p.focal_length || '?'}mm&#10;Shutter: ${formatShutter(p.shutter_speed)}&#10;ISO: ${p.iso || '?'}`;
-                if (p.isolation_bonus && p.isolation_bonus > 1.0) tooltip += `&#10;&#10;── Bonus ──&#10;Isolation: ${safeFloat(p.isolation_bonus, 1)}`;
+                tooltip += `&#10;${t('tooltip.tech_sharpness')}: ${safeFloat(p.tech_sharpness, 1)}`;
+                tooltip += `&#10;&#10;── ${t('tooltip.composition_section')} ──&#10;${t('tooltip.composition')}: ${safeFloat(p.comp_score, 1)}`;
+                if (p.composition_pattern) tooltip += `&#10;${t('tooltip.pattern')}: ${p.composition_pattern.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                if (p.power_point_score) tooltip += `&#10;${t('tooltip.power_points')}: ${safeFloat(p.power_point_score, 1)}`;
+                if (p.leading_lines_score) tooltip += `&#10;${t('tooltip.leading_lines')}: ${safeFloat(p.leading_lines_score, 1)}`;
+                tooltip += `&#10;&#10;── ${t('tooltip.technical_section')} ──&#10;${t('tooltip.exposure')}: ${safeFloat(p.exposure_score, 1)}&#10;${t('tooltip.color')}: ${safeFloat(p.color_score, 1)}`;
+                if (p.contrast_score) tooltip += `&#10;${t('tooltip.contrast')}: ${safeFloat(p.contrast_score, 1)}`;
+                if (p.dynamic_range_stops) tooltip += `&#10;${t('tooltip.dynamic_range')}: ${safeFloat(p.dynamic_range_stops, 1)}`;
+                if (p.mean_saturation) tooltip += `&#10;${t('tooltip.saturation')}: ${safeFloat(p.mean_saturation, 1)}`;
+                if (p.noise_sigma) tooltip += `&#10;${t('tooltip.noise')}: ${safeFloat(p.noise_sigma, 1)}`;
+                tooltip += `&#10;&#10;── ${t('tooltip.exif_section')} ──`;
+                if (p.camera_model) tooltip += `&#10;${t('tooltip.camera')}: ${p.camera_model}`;
+                if (p.lens_model) tooltip += `&#10;${t('tooltip.lens')}: ${p.lens_model}`;
+                tooltip += `&#10;${t('tooltip.focal')}: ${p.focal_length || '?'}mm&#10;${t('tooltip.shutter')}: ${formatShutter(p.shutter_speed)}&#10;${t('tooltip.iso')}: ${p.iso || '?'}`;
+                if (p.isolation_bonus && p.isolation_bonus > 1.0) tooltip += `&#10;&#10;── ${t('tooltip.bonus_section')} ──&#10;${t('tooltip.isolation')}: ${safeFloat(p.isolation_bonus, 1)}`;
 
                 // Sort value display
                 let sortValue;
                 if (sortCol === 'date_taken' || sortCol === 'aggregate') {
                     sortValue = `<span class="text-green-400 font-bold text-base">${safeFloat(p.aggregate, 1)}</span>`;
                 } else if (sortCol === 'shutter_speed') {
-                    sortValue = `<span class="text-green-400 font-bold text-base" title="Shutter">${formatShutter(p[sortCol])}</span>`;
+                    sortValue = `<span class="text-green-400 font-bold text-base" title="${t('tooltip.shutter')}">${formatShutter(p[sortCol])}</span>`;
                 } else if (sortCol === 'composition_pattern') {
-                    const pattern = p[sortCol] || 'N/A';
-                    sortValue = `<span class="text-green-400 font-bold text-base" title="Composition">${pattern.replace(/_/g, ' ')}</span>`;
+                    const pattern = p[sortCol] || t('ui.labels.na');
+                    sortValue = `<span class="text-green-400 font-bold text-base" title="${t('tooltip.composition')}">${pattern.replace(/_/g, ' ')}</span>`;
                 } else {
                     sortValue = `<span class="text-green-400 font-bold text-base">${safeFloat(p[sortCol], 1)}</span>`;
                 }
@@ -1561,7 +1578,7 @@
                         ${EDITION_AUTHENTICATED && (p.face_count || 0) > 0 && !currentPersonFilter ? `
                         <button onclick="event.stopPropagation(); showAssignFaceModal('${escapedPath}')"
                                 class="assign-face-btn opacity-0 group-hover:opacity-100 absolute top-1 left-1 w-6 h-6 bg-blue-600 hover:bg-blue-500 rounded-full flex items-center justify-center text-white transition-opacity z-10"
-                                title="Assign face to person">
+                                title="{{ _('manage_persons.assign_face') }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                             </svg>
@@ -1741,7 +1758,7 @@
                         // Category and aggregate line — preceding lines are filename/date
                         if (headerLines.length >= 1) data.filename = headerLines[0];
                         if (headerLines.length >= 2) data.date = headerLines[1];
-                        const match = line.match(/\[([^\]]+)\]\s*Aggregate:\s*([\d.]+)/);
+                        const match = line.match(/\[([^\]]+)\]\s*.+?:\s*([\d.]+)/);
                         if (match) {
                             data.category = match[1];
                             data.aggregate = match[2];
@@ -1769,7 +1786,7 @@
                 let html = '';
                 if (data.filename) html += `<div class="preview-filename">${data.filename}</div>`;
                 if (data.date) html += `<div class="preview-date">${data.date}</div>`;
-                html += `<div class="category">[${data.category}] ${data.aggregate}</div>`;
+                html += `<div class="category">[${data.category}] ${t('tooltip.aggregate')}: ${data.aggregate}</div>`;
                 for (const section of data.sections) {
                     html += `<div class="score-section">`;
                     html += `<div class="score-section-title">${section.title}</div>`;
@@ -1931,7 +1948,7 @@
                 const faces = data.faces || [];
 
                 if (faces.length === 0) {
-                    alert('No faces found in this photo');
+                    showToast(t('manage_persons.no_faces_in_photo'), true);
                     return;
                 }
 
@@ -1945,7 +1962,7 @@
                 }
             } catch (err) {
                 console.error('Error fetching faces:', err);
-                alert('Error loading faces');
+                showToast(t('manage_persons.error_loading_faces'), true);
             }
         }
 
@@ -1960,11 +1977,11 @@
 
                 const assignedInfo = face.person_name
                     ? `<div class="text-xs text-green-400 truncate">&rarr; ${face.person_name}</div>`
-                    : `<div class="text-xs text-neutral-500">Unassigned</div>`;
+                    : `<div class="text-xs text-neutral-500">${t('manage_persons.unassigned')}</div>`;
 
                 el.innerHTML = `
                     <img src="/face_thumbnail/${face.id}" class="w-full aspect-square rounded object-cover mb-2" loading="lazy">
-                    <div class="text-xs text-neutral-300">Face ${face.face_index + 1}</div>
+                    <div class="text-xs text-neutral-300">${t('manage_persons.face_number', {index: face.face_index + 1})}</div>
                     ${assignedInfo}
                 `;
                 grid.appendChild(el);
@@ -1985,7 +2002,7 @@
 
         async function showSelectPersonModal() {
             const grid = document.getElementById('select-person-grid');
-            grid.innerHTML = '<div class="col-span-6 text-center text-neutral-500">Loading...</div>';
+            grid.innerHTML = `<div class="col-span-6 text-center text-neutral-500">${t('ui.labels.loading')}</div>`;
             document.getElementById('select-person-modal').classList.remove('hidden');
 
             try {
@@ -2009,7 +2026,7 @@
                 el.innerHTML = `
                     <img src="/person_thumbnail/${id}" class="w-full aspect-square rounded-full object-cover mb-2" loading="lazy">
                     <div class="text-xs text-neutral-300 truncate">${name}</div>
-                    <div class="text-xs text-neutral-500">${count} photos</div>
+                    <div class="text-xs text-neutral-500">${t('manage_persons.photos_count', {count})}</div>
                 `;
                 grid.appendChild(el);
             }
@@ -2021,7 +2038,7 @@
         document.getElementById('person-search').addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase();
             const filtered = allPersons.filter(([id, name]) =>
-                (name || 'Person ' + id).toLowerCase().includes(query)
+                (name || t('manage_persons.person_fallback', {id})).toLowerCase().includes(query)
             );
             renderPersonGrid(filtered);
         });
@@ -2106,7 +2123,7 @@
                 });
             } catch (err) {
                 loading.classList.add('hidden');
-                empty.textContent = 'Error: ' + err.message;
+                empty.textContent = err.message;
                 empty.classList.remove('hidden');
             }
         }
@@ -2147,17 +2164,17 @@
 
                 if (data.success) {
                     closeSelectPersonModal();
-                    showNotification(t('notifications.faces_assigned') || 'Face assigned');
+                    showToast(t('notifications.faces_assigned'));
                 } else {
-                    alert('Error assigning faces: ' + (data.error || 'Unknown error'));
+                    showToast(t('manage_persons.error_assigning_faces') + ': ' + (data.error || ''), true);
                 }
             } catch (err) {
-                alert('Error assigning faces: ' + err.message);
+                showToast(t('manage_persons.error_assigning_faces') + ': ' + err.message, true);
             }
         }
 
         async function removePersonFromPhoto(photoPath, personId) {
-            if (!confirm('Remove this person from this photo?')) return;
+            if (!confirm(t('manage_persons.confirm_remove_person'))) return;
             try {
                 const response = await fetch('/api/photo/unassign_person', {
                     method: 'POST',
@@ -2170,10 +2187,10 @@
                     const card = document.querySelector(`[data-path="${CSS.escape(encodeURIComponent(photoPath))}"]`);
                     if (card) card.remove();
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
+                    showToast(data.error || '', true);
                 }
             } catch (err) {
-                alert('Error: ' + err.message);
+                showToast(err.message, true);
             }
         }
 
@@ -2225,12 +2242,12 @@
                     const favoriteBtn = starContainer.closest('.rating-controls')?.querySelector('[data-favorite]');
                     const isFavorite = favoriteBtn?.dataset.favorite === '1';
                     updateRatingBadge(photoPath, rating, isFavorite);
-                    showNotification(t('rating.set_rating') + ': ' + rating + ' ★');
+                    showToast(t('rating.set_rating') + ': ' + rating + ' ★');
                 } else {
-                    showNotification('Error: ' + (data.error || 'Unknown'), true);
+                    showToast(data.error || '', true);
                 }
             } catch (err) {
-                showNotification('Error: ' + err.message, true);
+                showToast(err.message, true);
             }
         }
 
@@ -2263,12 +2280,12 @@
                     const starContainer = btn.closest('.rating-controls')?.querySelector('.star-rating');
                     const starRating = parseInt(starContainer?.dataset.current || '0', 10);
                     updateRatingBadge(photoPath, starRating, data.is_favorite);
-                    showNotification(data.is_favorite ? t('rating.add_favorite') : t('rating.remove_favorite'));
+                    showToast(data.is_favorite ? t('rating.add_favorite') : t('rating.remove_favorite'));
                 } else {
-                    showNotification('Error: ' + (data.error || 'Unknown'), true);
+                    showToast(data.error || '', true);
                 }
             } catch (err) {
-                showNotification('Error: ' + err.message, true);
+                showToast(err.message, true);
             }
         }
 
@@ -2308,12 +2325,12 @@
                         btn.classList.add('text-neutral-500');
                         btn.dataset.rejected = '0';
                     }
-                    showNotification(data.is_rejected ? t('rating.mark_rejected') : t('rating.unmark_rejected'));
+                    showToast(data.is_rejected ? t('rating.mark_rejected') : t('rating.unmark_rejected'));
                 } else {
-                    showNotification('Error: ' + (data.error || 'Unknown'), true);
+                    showToast(data.error || '', true);
                 }
             } catch (err) {
-                showNotification('Error: ' + err.message, true);
+                showToast(err.message, true);
             }
         }
 

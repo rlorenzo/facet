@@ -49,13 +49,16 @@
       "selected": "selected",
       "of": "of",
       "from": "From",
-      "to": "To"
+      "to": "To",
+      "loading": "Loading...",
+      "na": "N/A"
     },
     "badges": {
       "best": "BEST",
       "blink": "BLINK",
       "bw": "B&W",
-      "dup": "DUP"
+      "dup": "DUP",
+      "rejected": "REJ"
     }
   },
   "drawer": {
@@ -146,7 +149,13 @@
     "saturation": "Saturation",
     "noise": "Noise",
     "bonus_section": "Bonus",
-    "isolation": "Isolation"
+    "isolation": "Isolation",
+    "exif_section": "EXIF",
+    "camera": "Camera",
+    "lens": "Lens",
+    "focal": "Focal",
+    "shutter": "Shutter",
+    "iso": "ISO"
   },
   "notifications": {
     "copied": "Copied!",
@@ -158,7 +167,12 @@
     "failed_rename": "Failed to rename person",
     "error_merging": "Error merging persons",
     "error_deleting": "Error deleting person",
-    "faces_assigned": "Faces assigned"
+    "faces_assigned": "Faces assigned",
+    "connection_error": "Connection error",
+    "downloading_count": "Downloading {count} photo...",
+    "downloading_count_plural": "Downloading {count} photos...",
+    "downloaded_count": "Downloaded {count} photo",
+    "downloaded_count_plural": "Downloaded {count} photos"
   },
   "manage_persons": {
     "title": "Manage Persons",
@@ -187,10 +201,24 @@
     "search_persons": "Search persons...",
     "no_named_persons": "No named persons found",
     "error_loading_persons": "Error loading persons",
-    "suggest_merges": "Suggest merges"
+    "suggest_merges": "Suggest merges",
+    "person_fallback": "Person {id}",
+    "photos_count": "{count} photos",
+    "unassigned": "Unassigned",
+    "face_number": "Face {index}",
+    "loading": "Loading...",
+    "no_faces_in_photo": "No faces found in this photo",
+    "error_loading_faces": "Error loading faces",
+    "error_self_merge": "Cannot merge a person into itself",
+    "error_avatar": "Error setting avatar",
+    "error_assigning_faces": "Error assigning faces",
+    "rename_person": "Rename person",
+    "confirm_remove_person": "Remove this person from this photo?",
+    "remove_person_title": "Remove person from this photo"
   },
   "compare": {
     "title": "Compare Photos",
+    "header": "Compare",
     "comparisons": "comparisons",
     "category": "Category",
     "strategy": "Strategy",
@@ -222,7 +250,140 @@
     "photo_b": "Photo B",
     "loading": "Loading...",
     "no_photos": "No photos available for comparison in this category.",
-    "change_category": "Change category"
+    "change_category": "Change category",
+    "score_prefix": "Score: {score}",
+    "failed_to_load": "Failed to load",
+    "actions": {
+      "equal_quality": "Equal Quality (T)",
+      "cant_compare": "Can't Compare (S)",
+      "suggest_weights": "Suggest Weights",
+      "apply_config": "Apply Config",
+      "recalculate": "Recalculate",
+      "reset_weights": "Reset Weights",
+      "reset_all": "Reset All",
+      "recalculating": "Recalculating...",
+      "saving": "Saving...",
+      "loading": "Loading..."
+    },
+    "tooltips": {
+      "equal_quality": "Both photos are equally good (or equally bad)",
+      "cant_compare": "Can't decide or photos are too different to compare",
+      "suggest_weights": "Suggest optimal weights based on your comparisons",
+      "apply_config": "Save suggested weights to config file",
+      "recalculate": "Recalculate all categories and aggregate scores using current config",
+      "reset_weights": "Reset weight sliders to original values",
+      "reset_all": "Clear all comparison data and start fresh",
+      "strategy_info": "Strategy info",
+      "how_it_works": "How it works"
+    },
+    "stats": {
+      "title": "Stats",
+      "total": "Total",
+      "a_label": "A",
+      "b_label": "B",
+      "ties": "Ties",
+      "total_comparisons": "Total Comparisons",
+      "a_wins": "A Wins",
+      "b_wins": "B Wins",
+      "ties_label": "Ties"
+    },
+    "weights": {
+      "title": "Weight Preview",
+      "score_preview": "Score Preview",
+      "category_label": "Category",
+      "property": "Property",
+      "col_a": "A",
+      "col_b": "B",
+      "col_weight": "Weight",
+      "col_pct": "%",
+      "no_significant_changes": "No significant changes",
+      "weight_changes": "Weight changes:",
+      "learned_from": "Learned from {count} comparisons",
+      "incl_ties": "incl. {count} ties",
+      "prediction_accuracy": "Prediction accuracy",
+      "mispredicted": "{count} comparisons predicted incorrectly",
+      "already_good": "Current weights already achieve good accuracy - changes not recommended.",
+      "groups": {
+        "quality": "Quality",
+        "composition": "Composition",
+        "technical": "Technical",
+        "bonus": "Bonus"
+      },
+      "labels": {
+        "aesthetic": "Aesthetic",
+        "quality_score": "Quality Score",
+        "face_quality": "Face Quality",
+        "face_sharpness": "Face Sharpness",
+        "eye_sharpness": "Eye Sharpness",
+        "tech_sharpness": "Tech Sharpness",
+        "composition": "Composition",
+        "power_points": "Power Points",
+        "leading_lines": "Leading Lines",
+        "exposure": "Exposure",
+        "color": "Color",
+        "contrast": "Contrast",
+        "dynamic_range": "Dynamic Range",
+        "saturation": "Saturation",
+        "noise_inv": "Noise (inv)",
+        "isolation": "Isolation"
+      },
+      "help": {
+        "title": "How Weight Learning Works",
+        "step1_title": "1. Your comparisons teach the system",
+        "step1_desc": "Each time you pick a winner, the system learns your preferences using the Bradley-Terry model, which calculates a \"true quality score\" for each photo based on win/loss patterns.",
+        "step2_title": "2. Suggest Weights optimizes the weight combination",
+        "step2_desc": "The algorithm finds the best ratio of weights that makes the combined score match your preferences. It uses mathematical optimization (SLSQP) to maximize how well the weighted sum predicts your choices.",
+        "step3_title": "3. Rank correlation measures accuracy",
+        "step3_positive": "Positive correlation (+0.5 to +1.0) = weights rank photos similar to your preferences",
+        "step3_zero": "Near zero (-0.2 to +0.2) = not enough data or mixed signals",
+        "step3_negative": "Negative correlation = weights rank opposite to your preferences",
+        "step4_title": "4. Apply to save, Recalculate to update",
+        "step4_desc": "Click \"Apply to Config\" to save weights, then \"Recalculate Scores\" to update all photo scores in the database.",
+        "tip": "Do 30+ comparisons per category for suggestions (50+ recommended for accuracy). Mix strategies for best coverage. Ties are now included in optimization."
+      }
+    },
+    "modal": {
+      "title": "Change Category",
+      "photo": "Photo",
+      "current": "Current",
+      "select_category": "Select new category:",
+      "analyze": "Analyze Filter Conflicts",
+      "apply_override": "Apply Override",
+      "no_conflicts": "Photo already matches target category filters",
+      "filter_conflicts": "Filter Conflicts",
+      "suggested_changes": "Suggested Filter Changes",
+      "photo_values": "Photo Values",
+      "cancel": "Cancel"
+    },
+    "confirm": {
+      "reset_title": "Reset All Comparison Data",
+      "reset_body": "This will permanently delete:\n- {count} pairwise comparisons\n- All learned weight suggestions\n- All session statistics\n\nThis cannot be undone.",
+      "recalculate_title": "Recalculate All Photo Scores",
+      "recalculate_body": "This will:\n- Re-determine categories for all photos based on config filters\n- Recalculate aggregate scores using current category weights\n- Update the database with new scores\n\nCategory weights from: {category}\n\nThis may take several minutes for large databases.",
+      "apply_title": "Apply Weights to Config",
+      "apply_body": "Category: {category}\n\nWeight changes:\n{changes}\n\nThis will:\n- Update scoring_config.json with new weights\n- Create a backup of the current config\n- NOT recalculate existing scores (use \"Recalculate Scores\" after)\n\nSave these weights?",
+      "confirm_button": "Confirm",
+      "cancel_button": "Cancel"
+    },
+    "notify": {
+      "data_reset": "Comparison data has been reset.",
+      "recalculate_complete": "Recalculation complete! Categories and scores have been updated.",
+      "weights_saved": "Weights saved for \"{category}\"! Click \"Recalculate\" to apply to all photos.",
+      "category_changed": "Category changed to {category}"
+    },
+    "error": {
+      "load_pair": "Failed to load next pair",
+      "reset_failed": "Error resetting comparison data",
+      "recalculate_failed": "Error recalculating scores. Check console for details.",
+      "select_category_first": "Please select a category first to apply weights.",
+      "no_weight_changes": "No weight changes to apply.",
+      "save_weights_failed": "Error saving weights",
+      "no_suggestions": "Could not generate suggestions",
+      "suggestions_failed": "Error fetching weight suggestions",
+      "category_change_failed": "Failed to change category",
+      "override_failed": "Error applying category override",
+      "analyze_failed": "Error analyzing filter conflicts"
+    }
   },
   "person_page": {
     "title": "{name} - Facet"
@@ -343,7 +504,9 @@
     "all_reviewed": "All merge suggestions reviewed",
     "merged_success": "Merged {count} persons into {name}",
     "loading": "Computing merge suggestions...",
-    "load_error": "Failed to load merge suggestions"
+    "load_error": "Failed to load merge suggestions",
+    "error_self_merge": "Cannot merge a person into itself",
+    "person_fallback": "Person {id}"
   },
   "stats": {
     "title": "EXIF Statistics",
@@ -459,6 +622,22 @@
     },
     "loading": "Loading data...",
     "no_data": "No data available",
-    "back": "Back to Gallery"
+    "back": "Back to Gallery",
+    "focal_35mm": "(eq. 35mm)"
+  },
+  "login": {
+    "title": "Login",
+    "password_label": "Password",
+    "placeholder": "Enter password",
+    "submit": "Login",
+    "invalid_password": "Invalid password"
+  },
+  "edition": {
+    "unlock_title": "Unlock Edition Mode",
+    "unlock_description": "Enter the edition password to enable editing features.",
+    "unlock_button": "Unlock",
+    "lock_title": "Edition mode active - click to lock",
+    "password_placeholder": "Edition password",
+    "invalid_password": "Invalid password"
   }
 }

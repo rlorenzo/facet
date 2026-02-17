@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -271,7 +271,7 @@
     function renderSettings(d) {
         document.getElementById('title-iso').textContent = t('stats.charts.iso_distribution');
         document.getElementById('title-aperture').textContent = t('stats.charts.aperture_usage');
-        document.getElementById('title-focal').textContent = t('stats.charts.focal_length') + ' (eq. 35mm)';
+        document.getElementById('title-focal').textContent = t('stats.charts.focal_length') + ' ' + t('stats.focal_35mm');
         document.getElementById('title-shutter').textContent = t('stats.charts.shutter_speed');
         document.getElementById('title-score-dist').textContent = t('stats.charts.score_distribution');
 
@@ -557,5 +557,17 @@
     // Load gear tab on page load
     loadTab('gear');
     </script>
+
+    <!-- Language Switcher Footer -->
+    <footer class="bg-neutral-900 border-t border-neutral-800 py-4 mt-8">
+        <div class="flex justify-center items-center gap-2">
+            {% for code in supported_languages %}
+            <a href="?lang={{ code }}" class="text-xs px-3 py-1.5 rounded transition-colors
+                {% if lang == code %}bg-green-600 text-white{% else %}bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700{% endif %}">
+                {{ _('language.' ~ code) }}
+            </a>
+            {% endfor %}
+        </div>
+    </footer>
 </body>
 </html>

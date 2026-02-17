@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,8 +66,16 @@
     </main>
 
     <!-- Toast notification -->
-    <div id="toast" class="hidden fixed bottom-6 right-6 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 toast">
-        <span id="toast-message"></span>
+    <div id="toast" class="fixed bottom-4 right-4 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toast-container" class="flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset">
+            <svg id="toast-icon-success" class="h-5 w-5 flex-shrink-0 text-green-400 hidden" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/>
+            </svg>
+            <svg id="toast-icon-error" class="h-5 w-5 flex-shrink-0 text-red-400 hidden" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+            </svg>
+            <p id="toast-text" class="text-sm font-medium"></p>
+        </div>
     </div>
 
     <!-- Hover preview (positioned by JS) -->
@@ -157,7 +165,7 @@
                     <div class="flex flex-wrap gap-2 justify-center">
                         ${group.persons.map(p => `
                             <div class="person-item relative flex flex-col items-center bg-neutral-800 border border-neutral-700 rounded-lg p-1.5 hover:border-blue-500 transition-colors"
-                                 data-person-id="${p.id}" data-person-name="${(p.name || 'Person ' + p.id).replace(/"/g, '&quot;')}">
+                                 data-person-id="${p.id}" data-person-name="${(p.name || t('manage_persons.person_fallback', {id: p.id})).replace(/"/g, '&quot;')}">
                                 <button onclick="removePersonFromGroup(${idx}, ${p.id})" class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center text-white transition-colors z-10" title="${t('ui.buttons.remove')}">
                                     <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
@@ -166,7 +174,7 @@
                                 <a href="/?person=${p.id}" target="_blank">
                                     <img src="/person_thumbnail/${p.id}" class="w-12 h-12 rounded-full object-cover" loading="lazy" alt="">
                                 </a>
-                                <div class="text-[10px] text-neutral-300 truncate max-w-[60px] mt-1">${p.name || 'Person ' + p.id}</div>
+                                <div class="text-[10px] text-neutral-300 truncate max-w-[60px] mt-1">${p.name || t('manage_persons.person_fallback', {id: p.id})}</div>
                                 <button onclick="mergeInto(${idx}, ${p.id})" ${group.persons.length < 2 ? 'disabled' : ''} class="mt-1 px-2 py-0.5 ${group.persons.length < 2 ? 'bg-neutral-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'} text-white text-[10px] rounded transition-colors">
                                     ${t('ui.buttons.merge')}
                                 </button>
@@ -218,7 +226,7 @@
             const targetPerson = group.persons.find(p => p.id === targetId);
 
             if (sourceIds.length === 0) {
-                alert('Cannot merge a person into itself');
+                showToast(t('merge_suggestions.error_self_merge'), true);
                 return;
             }
 
@@ -258,22 +266,39 @@
                     // Show toast
                     showToast(t('merge_suggestions.merged_success', {
                         count: sourceIds.length,
-                        name: targetPerson.name || 'Person ' + targetId
+                        name: targetPerson.name || t('manage_persons.person_fallback', {id: targetId})
                     }));
                 } else {
-                    alert(t('notifications.error_merging') + ': ' + (data.error || 'Unknown error'));
+                    showToast(t('notifications.error_merging') + ': ' + (data.error || ''), true);
                 }
             } catch (err) {
-                alert(t('notifications.error_merging') + ': ' + err.message);
+                showToast(t('notifications.error_merging') + ': ' + err.message, true);
             }
         }
 
-        function showToast(message) {
+        function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            toastMessage.textContent = message;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
+            const container = document.getElementById('toast-container');
+            const text = document.getElementById('toast-text');
+            const iconSuccess = document.getElementById('toast-icon-success');
+            const iconError = document.getElementById('toast-icon-error');
+
+            text.textContent = message;
+            if (isError) {
+                container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset bg-red-900 text-red-200 ring-red-700/50';
+                iconSuccess.classList.add('hidden');
+                iconError.classList.remove('hidden');
+            } else {
+                container.className = 'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1 ring-inset bg-green-900 text-green-200 ring-green-700/50';
+                iconError.classList.add('hidden');
+                iconSuccess.classList.remove('hidden');
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            if (toast._hideTimer) clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 3000);
         }
 
         function changeThreshold(newThreshold) {
@@ -318,5 +343,17 @@
         // Load groups on page load
         loadGroups();
     </script>
+
+    <!-- Language Switcher Footer -->
+    <footer class="bg-neutral-900 border-t border-neutral-800 py-4 mt-8">
+        <div class="flex justify-center items-center gap-2">
+            {% for code in supported_languages %}
+            <a href="?lang={{ code }}&threshold={{ threshold }}" class="text-xs px-3 py-1.5 rounded transition-colors
+                {% if lang == code %}bg-green-600 text-white{% else %}bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700{% endif %}">
+                {{ _('language.' ~ code) }}
+            </a>
+            {% endfor %}
+        </div>
+    </footer>
 </body>
 </html>
