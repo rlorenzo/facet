@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('stats.title') }} - Facet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        body { background: #0a0a0a; }
+        .tab-btn { border-bottom: 2px solid transparent; }
+        .tab-btn.active { border-bottom-color: #22c55e; color: #22c55e; }
+        .chart-card { background: #171717; border: 1px solid #262626; border-radius: 0.5rem; padding: 1rem; }
+        .loading-spinner { display: inline-block; width: 1.5rem; height: 1.5rem; border: 2px solid #404040; border-top-color: #22c55e; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-neutral-200 min-h-screen">
+    <!-- Header -->
+    <header class="bg-neutral-900 border-b border-neutral-800 px-4 py-3 flex items-center gap-4">
+        <a href="/" class="text-neutral-400 hover:text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </a>
+        <h1 class="text-lg font-semibold">{{ _('stats.title') }}</h1>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="bg-neutral-900 border-b border-neutral-800 px-4 flex gap-1">
+        <button class="tab-btn active px-4 py-3 text-sm font-medium text-neutral-400 hover:text-white transition-colors" data-tab="gear">{{ _('stats.tabs.gear') }}</button>
+        <button class="tab-btn px-4 py-3 text-sm font-medium text-neutral-400 hover:text-white transition-colors" data-tab="settings">{{ _('stats.tabs.settings') }}</button>
+        <button class="tab-btn px-4 py-3 text-sm font-medium text-neutral-400 hover:text-white transition-colors" data-tab="timeline">{{ _('stats.tabs.timeline') }}</button>
+        <button class="tab-btn px-4 py-3 text-sm font-medium text-neutral-400 hover:text-white transition-colors" data-tab="correlations">{{ _('stats.tabs.correlations') }}</button>
+    </nav>
+
+    <!-- Tab Panels -->
+    <main class="p-4 mx-auto">
+        <!-- Gear Tab -->
+        <div id="panel-gear" class="tab-panel">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-cameras"></h3><canvas id="chart-cameras"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-lenses"></h3><canvas id="chart-lenses"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-combos"></h3><canvas id="chart-combos"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-categories"></h3><canvas id="chart-categories"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="panel-settings" class="tab-panel hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-iso"></h3><canvas id="chart-iso"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-aperture"></h3><canvas id="chart-aperture"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-focal"></h3><canvas id="chart-focal"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-shutter"></h3><canvas id="chart-shutter"></canvas></div>
+                <div class="chart-card lg:col-span-2"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-score-dist"></h3><canvas id="chart-score-dist"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Timeline Tab -->
+        <div id="panel-timeline" class="tab-panel hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="chart-card lg:col-span-2"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-monthly"></h3><canvas id="chart-monthly"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-yearly"></h3><canvas id="chart-yearly"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-heatmap"></h3><canvas id="chart-heatmap"></canvas></div>
+                <div class="chart-card"><h3 class="text-sm font-medium text-neutral-300 mb-3" id="title-top-days"></h3><canvas id="chart-top-days"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Correlations Tab -->
+        <div id="panel-correlations" class="tab-panel hidden">
+            <!-- Controls -->
+            <div class="chart-card mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">{{ _('stats.correlations.x_axis') }}</label>
+                        <select id="corr-x" class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm">
+                            {% for key in ['iso','f_stop','focal_length','camera_model','lens_model','date_month','date_year','composition_pattern','category','aggregate','aesthetic','tech_sharpness','comp_score','face_quality','color_score','exposure_score'] %}
+                            <option value="{{ key }}">{{ _('stats.correlations.dimensions.' + key) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">{{ _('stats.correlations.group_by') }}</label>
+                        <select id="corr-group" class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm">
+                            <option value="">{{ _('stats.correlations.none') }}</option>
+                            {% for key in ['iso','f_stop','focal_length','camera_model','lens_model','date_month','date_year','composition_pattern','category','aggregate','aesthetic','tech_sharpness','comp_score','face_quality','color_score','exposure_score'] %}
+                            <option value="{{ key }}">{{ _('stats.correlations.dimensions.' + key) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">{{ _('stats.correlations.chart_type') }}</label>
+                        <select id="corr-chart-type" class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm">
+                            <option value="line">{{ _('stats.correlations.chart_types.line') }}</option>
+                            <option value="area">{{ _('stats.correlations.chart_types.area') }}</option>
+                            <option value="bar">{{ _('stats.correlations.chart_types.bar') }}</option>
+                            <option value="horizontalBar">{{ _('stats.correlations.chart_types.horizontalBar') }}</option>
+                            <option value="radar">{{ _('stats.correlations.chart_types.radar') }}</option>
+                            <option value="scatter">{{ _('stats.correlations.chart_types.scatter') }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">{{ _('stats.correlations.min_samples') }}</label>
+                        <input type="number" id="corr-min-samples" value="3" min="1" max="100"
+                               class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">{{ _('drawer.fields.from_date') }}</label>
+                        <input type="date" id="corr-date-from"
+                               class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-neutral-400 mb-1">{{ _('drawer.fields.to_date') }}</label>
+                        <input type="date" id="corr-date-to"
+                               class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-neutral-400 mb-2">{{ _('stats.correlations.y_metrics') }}</label>
+                    <div id="corr-metrics-select" class="relative">
+                        <div id="corr-metrics-trigger" class="w-full bg-neutral-800 border border-neutral-700 text-neutral-200 rounded px-2 py-1.5 text-sm cursor-pointer flex items-center justify-between min-h-[34px]">
+                            <div id="corr-metrics-chips" class="flex flex-wrap gap-1 flex-1"></div>
+                            <svg class="w-4 h-4 ml-2 shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div id="corr-metrics-dropdown" class="hidden absolute z-50 mt-1 w-full bg-neutral-800 border border-neutral-700 rounded shadow-lg max-h-60 overflow-y-auto"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Chart -->
+            <div class="chart-card" id="corr-chart-card" style="min-height:640px; display:flex; flex-direction:column;">
+                <div id="corr-status" class="text-xs text-neutral-500 mb-2"></div>
+                <div style="flex:1; position:relative; min-height:0;">
+                    <canvas id="chart-correlations"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading overlay -->
+        <div id="loading-overlay" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+            <div class="bg-neutral-900 rounded-lg p-6 flex items-center gap-3">
+                <div class="loading-spinner"></div>
+                <span id="loading-text"></span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    const I18N = {{ js_translations(['stats']) | tojson | safe }};
+    function t(key) {
+        const parts = key.split('.');
+        let val = I18N;
+        for (const p of parts) { val = val && val[p]; }
+        return val || key;
+    }
+
+    // Chart.js dark theme defaults
+    Chart.defaults.color = '#a3a3a3';
+    Chart.defaults.borderColor = '#262626';
+    Chart.defaults.plugins.legend.labels.color = '#a3a3a3';
+
+    const COLORS = ['#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
+    const tabsLoaded = {};
+    const charts = {};
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            document.getElementById('panel-' + tab).classList.remove('hidden');
+            if (tab === 'correlations') {
+                if (!tabsLoaded[tab]) { initCorrelationControls(); fetchCorrelations(); }
+            } else if (!tabsLoaded[tab]) {
+                loadTab(tab);
+            }
+        });
+    });
+
+    function showLoading(show) {
+        document.getElementById('loading-overlay').classList.toggle('hidden', !show);
+        document.getElementById('loading-text').textContent = t('stats.loading');
+    }
+
+    function makeChart(canvasId, config) {
+        if (charts[canvasId]) charts[canvasId].destroy();
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        charts[canvasId] = new Chart(ctx, config);
+    }
+
+    function horizontalBar(canvasId, labels, data, label, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const minH = Math.max(200, labels.length * 28);
+        canvas.parentElement.style.position = 'relative';
+        canvas.parentElement.style.height = minH + 'px';
+        makeChart(canvasId, {
+            type: 'bar',
+            data: { labels, datasets: [{ label, data, backgroundColor: color || COLORS[0], borderRadius: 3 }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: { x: { grid: { color: '#262626' }, ticks: { color: '#a3a3a3' } }, y: { grid: { display: false }, ticks: { color: '#d4d4d4', autoSkip: false, font: { size: 11 } } } } }
+        });
+    }
+
+    function verticalBar(canvasId, labels, datasets, xLabel, yLabel) {
+        makeChart(canvasId, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: { responsive: true, plugins: { legend: { display: datasets.length > 1, labels: { color: '#a3a3a3' } } },
+                scales: { x: { grid: { color: '#262626' }, title: { display: !!xLabel, text: xLabel, color: '#a3a3a3' }, ticks: { color: '#a3a3a3', maxRotation: 45, minRotation: 45, autoSkip: false, font: { size: 10 } } },
+                         y: { grid: { color: '#262626' }, title: { display: !!yLabel, text: yLabel, color: '#a3a3a3' }, ticks: { color: '#a3a3a3' } } } }
+        });
+    }
+
+    function lineChart(canvasId, labels, datasets, xLabel, yLabel) {
+        makeChart(canvasId, {
+            type: 'line',
+            data: { labels, datasets },
+            options: { responsive: true, interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: datasets.length > 1, labels: { color: '#a3a3a3' } } },
+                scales: { x: { grid: { color: '#262626' }, title: { display: !!xLabel, text: xLabel, color: '#a3a3a3' }, ticks: { color: '#a3a3a3' } },
+                         y: { grid: { color: '#262626' }, title: { display: !!yLabel, text: yLabel, color: '#a3a3a3' }, ticks: { color: '#a3a3a3' } } } }
+        });
+    }
+
+    async function loadTab(tab) {
+        showLoading(true);
+        try {
+            const resp = await fetch('/api/stats/' + tab);
+            const data = await resp.json();
+            tabsLoaded[tab] = true;
+            renderTab(tab, data);
+        } catch (e) {
+            console.error('Failed to load stats:', e);
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function renderTab(tab, data) {
+        switch(tab) {
+            case 'gear': renderGear(data); break;
+            case 'settings': renderSettings(data); break;
+            case 'timeline': renderTimeline(data); break;
+            case 'correlations': break; // handled by initCorrelationControls
+        }
+    }
+
+    function renderGear(d) {
+        document.getElementById('title-cameras').textContent = t('stats.charts.camera_bodies');
+        document.getElementById('title-lenses').textContent = t('stats.charts.lenses');
+        document.getElementById('title-combos').textContent = t('stats.charts.camera_lens_combos');
+        document.getElementById('title-categories').textContent = t('stats.charts.category_distribution');
+        if (d.cameras && d.cameras.length) {
+            horizontalBar('chart-cameras', d.cameras.map(r=>r.name), d.cameras.map(r=>r.count), t('stats.axes.photos'));
+        }
+        if (d.lenses && d.lenses.length) {
+            horizontalBar('chart-lenses', d.lenses.map(r=>r.name), d.lenses.map(r=>r.count), t('stats.axes.photos'), COLORS[1]);
+        }
+        if (d.combos && d.combos.length) {
+            horizontalBar('chart-combos', d.combos.map(r=>r.name), d.combos.map(r=>r.count), t('stats.axes.photos'), COLORS[2]);
+        }
+        if (d.categories && d.categories.length) {
+            horizontalBar('chart-categories', d.categories.map(r=>r.name), d.categories.map(r=>r.count), t('stats.axes.photos'), COLORS[3]);
+        }
+    }
+
+    function renderSettings(d) {
+        document.getElementById('title-iso').textContent = t('stats.charts.iso_distribution');
+        document.getElementById('title-aperture').textContent = t('stats.charts.aperture_usage');
+        document.getElementById('title-focal').textContent = t('stats.charts.focal_length') + ' (eq. 35mm)';
+        document.getElementById('title-shutter').textContent = t('stats.charts.shutter_speed');
+        document.getElementById('title-score-dist').textContent = t('stats.charts.score_distribution');
+
+        if (d.iso && d.iso.length) {
+            verticalBar('chart-iso', d.iso.map(r=>r.label), [
+                { label: t('stats.axes.photos'), data: d.iso.map(r=>r.count), backgroundColor: COLORS[0], borderRadius: 3 }
+            ], t('stats.axes.iso'), t('stats.axes.count'));
+        }
+        if (d.aperture && d.aperture.length) {
+            horizontalBar('chart-aperture', d.aperture.map(r=>'f/'+r.value), d.aperture.map(r=>r.count), t('stats.axes.photos'), COLORS[1]);
+        }
+        if (d.focal_length && d.focal_length.length) {
+            verticalBar('chart-focal', d.focal_length.map(r=>r.label), [
+                { label: t('stats.axes.photos'), data: d.focal_length.map(r=>r.count), backgroundColor: COLORS[2], borderRadius: 3 }
+            ], t('stats.axes.focal_length'), t('stats.axes.count'));
+        }
+        if (d.shutter_speed && d.shutter_speed.length) {
+            verticalBar('chart-shutter', d.shutter_speed.map(r=>r.label), [
+                { label: t('stats.axes.photos'), data: d.shutter_speed.map(r=>r.count), backgroundColor: COLORS[3], borderRadius: 3 }
+            ], t('stats.axes.shutter_speed'), t('stats.axes.count'));
+        }
+        if (d.score_distribution && d.score_distribution.length) {
+            verticalBar('chart-score-dist', d.score_distribution.map(r=>r.label), [
+                { label: t('stats.axes.photos'), data: d.score_distribution.map(r=>r.count), backgroundColor: COLORS[4], borderRadius: 3 }
+            ], t('stats.axes.score'), t('stats.axes.count'));
+        }
+    }
+
+    function renderTimeline(d) {
+        document.getElementById('title-monthly').textContent = t('stats.charts.photos_per_month');
+        document.getElementById('title-yearly').textContent = t('stats.charts.photos_per_year');
+        document.getElementById('title-heatmap').textContent = t('stats.charts.hours_heatmap');
+        document.getElementById('title-top-days').textContent = t('stats.charts.top_days');
+
+        if (d.monthly && d.monthly.length) {
+            lineChart('chart-monthly', d.monthly.map(r=>r.month), [
+                { label: t('stats.axes.photos'), data: d.monthly.map(r=>r.count), borderColor: COLORS[0], backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, pointRadius: 1 }
+            ], t('stats.axes.month'), t('stats.axes.photos'));
+        }
+        if (d.yearly && d.yearly.length) {
+            verticalBar('chart-yearly', d.yearly.map(r=>r.year), [
+                { label: t('stats.axes.photos'), data: d.yearly.map(r=>r.count), backgroundColor: COLORS[0], borderRadius: 3 }
+            ], t('stats.axes.year'), t('stats.axes.photos'));
+        }
+        if (d.heatmap && d.heatmap.length) {
+            const dayLabels = [t('stats.days.sun'), t('stats.days.mon'), t('stats.days.tue'), t('stats.days.wed'), t('stats.days.thu'), t('stats.days.fri'), t('stats.days.sat')];
+            const maxCount = Math.max(...d.heatmap.map(p => p.count), 1);
+            makeChart('chart-heatmap', {
+                type: 'bubble',
+                data: { datasets: [{
+                    label: t('stats.axes.photos'),
+                    data: d.heatmap.map(p => ({ x: p.hour, y: p.day, r: Math.max(2, (p.count / maxCount) * 20) })),
+                    backgroundColor: 'rgba(34,197,94,0.6)'
+                }]},
+                options: { responsive: true, plugins: { legend: { display: false }, tooltip: {
+                    callbacks: { label: ctx => { const p = d.heatmap[ctx.dataIndex]; return dayLabels[p.day] + ' ' + p.hour + 'h: ' + p.count + ' ' + t('stats.axes.photos').toLowerCase(); } }
+                }},
+                scales: {
+                    x: { min: -0.5, max: 23.5, grid: { color: '#262626' }, title: { display: true, text: t('stats.axes.hour'), color: '#a3a3a3' }, ticks: { color: '#a3a3a3', stepSize: 1 } },
+                    y: { min: -0.5, max: 6.5, reverse: true, grid: { color: '#262626' }, title: { display: true, text: t('stats.axes.day_of_week'), color: '#a3a3a3' },
+                        ticks: { color: '#a3a3a3', callback: v => dayLabels[v] || '' } }
+                }}
+            });
+        }
+        if (d.top_days && d.top_days.length) {
+            horizontalBar('chart-top-days', d.top_days.map(r=>r.date), d.top_days.map(r=>r.count), t('stats.axes.photos'), COLORS[3]);
+        }
+    }
+
+    const CORR_METRICS = ['aggregate','aesthetic','tech_sharpness','noise_sigma','comp_score',
+        'face_quality','color_score','exposure_score','contrast_score',
+        'dynamic_range_stops','mean_saturation','isolation_bonus','quality_score',
+        'power_point_score','leading_lines_score'];
+    const CORR_DEFAULTS = ['aggregate','aesthetic'];
+    let corrInitialized = false;
+
+    function initCorrelationControls() {
+        if (corrInitialized) return;
+        corrInitialized = true;
+        const dropdown = document.getElementById('corr-metrics-dropdown');
+        const trigger = document.getElementById('corr-metrics-trigger');
+        CORR_METRICS.forEach(m => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-2 px-3 py-1.5 text-sm text-neutral-300 cursor-pointer hover:bg-neutral-700';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.value = m;
+            cb.className = 'accent-green-500 corr-metric-cb';
+            if (CORR_DEFAULTS.includes(m)) cb.checked = true;
+            cb.addEventListener('change', () => { updateMetricChips(); fetchCorrelations(); });
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(' ' + t('stats.correlations.metrics.' + m)));
+            dropdown.appendChild(label);
+        });
+        trigger.addEventListener('click', (e) => {
+            if (e.target.closest('.corr-chip-remove')) return;
+            dropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#corr-metrics-select')) dropdown.classList.add('hidden');
+        });
+        updateMetricAvailability();
+        updateMetricChips();
+        document.getElementById('corr-x').addEventListener('change', () => { updateMetricAvailability(); fetchCorrelations(); });
+        document.getElementById('corr-group').addEventListener('change', () => { updateMetricAvailability(); fetchCorrelations(); });
+        document.getElementById('corr-chart-type').addEventListener('change', fetchCorrelations);
+        document.getElementById('corr-min-samples').addEventListener('change', fetchCorrelations);
+        document.getElementById('corr-date-from').addEventListener('change', fetchCorrelations);
+        document.getElementById('corr-date-to').addEventListener('change', fetchCorrelations);
+
+    }
+
+    function updateMetricAvailability() {
+        const xVal = document.getElementById('corr-x').value;
+        const gVal = document.getElementById('corr-group').value;
+        const excluded = new Set([xVal, gVal].filter(Boolean));
+        document.querySelectorAll('.corr-metric-cb').forEach(cb => {
+            const disabled = excluded.has(cb.value);
+            cb.disabled = disabled;
+            const label = cb.closest('label');
+            if (disabled) {
+                cb.checked = false;
+                label.classList.add('opacity-40', 'pointer-events-none');
+            } else {
+                label.classList.remove('opacity-40', 'pointer-events-none');
+            }
+        });
+        updateMetricChips();
+    }
+
+    function updateMetricChips() {
+        const chips = document.getElementById('corr-metrics-chips');
+        chips.innerHTML = '';
+        document.querySelectorAll('.corr-metric-cb:checked').forEach(cb => {
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-1 bg-neutral-700 text-neutral-200 text-xs rounded px-2 py-0.5';
+            chip.textContent = t('stats.correlations.metrics.' + cb.value);
+            const rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'corr-chip-remove text-neutral-400 hover:text-white ml-0.5';
+            rm.innerHTML = '&times;';
+            rm.addEventListener('click', (e) => { e.stopPropagation(); cb.checked = false; updateMetricChips(); fetchCorrelations(); });
+            chip.appendChild(rm);
+            chips.appendChild(chip);
+        });
+        if (!chips.children.length) {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'text-neutral-500 text-sm';
+            placeholder.textContent = t('stats.correlations.y_metrics');
+            chips.appendChild(placeholder);
+        }
+    }
+
+    async function fetchCorrelations() {
+        const x = document.getElementById('corr-x').value;
+        const groupBy = document.getElementById('corr-group').value;
+        const minSamples = document.getElementById('corr-min-samples').value || '3';
+        const checked = [...document.querySelectorAll('.corr-metric-cb:checked')].map(c => c.value);
+        const status = document.getElementById('corr-status');
+
+        if (!checked.length) {
+            status.textContent = t('stats.correlations.select_metric');
+            if (charts['chart-correlations']) { charts['chart-correlations'].destroy(); delete charts['chart-correlations']; }
+            return;
+        }
+
+        status.textContent = t('stats.loading');
+        try {
+            const params = new URLSearchParams({ x, y: checked.join(','), min_samples: minSamples });
+            if (groupBy) params.set('group_by', groupBy);
+            const dateFrom = document.getElementById('corr-date-from').value;
+            const dateTo = document.getElementById('corr-date-to').value;
+            if (dateFrom) params.set('date_from', dateFrom);
+            if (dateTo) params.set('date_to', dateTo);
+            const resp = await fetch('/api/stats/correlations?' + params);
+            const data = await resp.json();
+            if (data.error) { status.textContent = data.error; return; }
+            tabsLoaded['correlations'] = true;
+            renderCorrelationChart(data);
+            const bucketCount = data.labels ? data.labels.length : 0;
+            status.textContent = bucketCount + ' ' + t('stats.correlations.buckets');
+        } catch(e) {
+            status.textContent = t('stats.correlations.error');
+            console.error(e);
+        }
+    }
+
+    function renderCorrelationChart(data) {
+        const chartType = document.getElementById('corr-chart-type').value;
+        const isHorizontal = chartType === 'horizontalBar';
+        const isArea = chartType === 'area';
+        const isRadar = chartType === 'radar';
+        const isScatter = chartType === 'scatter';
+        const type = isHorizontal ? 'bar' : isArea ? 'line' : isScatter ? 'scatter' : chartType;
+        const labels = data.labels || [];
+        const datasets = [];
+        let ci = 0;
+
+        function makeDs(label, values, color) {
+            if (isArea) {
+                return { label, data: values, borderColor: color, backgroundColor: color + '33', tension: 0.3, pointRadius: 2, fill: true, spanGaps: true };
+            } else if (type === 'line') {
+                return { label, data: values, borderColor: color, backgroundColor: color + '33', tension: 0.3, pointRadius: 3, spanGaps: true };
+            } else if (isScatter) {
+                const points = values.map((v, i) => v != null ? { x: i, y: v } : null).filter(Boolean);
+                return { label, data: points, backgroundColor: color, pointRadius: 4 };
+            } else if (isRadar) {
+                return { label, data: values, borderColor: color, backgroundColor: color + '33', pointBackgroundColor: color, pointRadius: 3 };
+            } else {
+                return { label, data: values, backgroundColor: color, borderRadius: 3 };
+            }
+        }
+
+        if (data.group_by && data.groups) {
+            const groups = Object.keys(data.groups);
+            const metrics = data.metrics || [];
+            groups.forEach(grp => {
+                metrics.forEach(m => {
+                    const metricLabel = t('stats.correlations.metrics.' + m);
+                    const dsLabel = metrics.length > 1 ? grp + ' - ' + metricLabel : grp;
+                    const values = labels.map(lbl => {
+                        const bucket = data.groups[grp] && data.groups[grp][lbl];
+                        return bucket ? bucket[m] : null;
+                    });
+                    datasets.push(makeDs(dsLabel, values, COLORS[ci++ % COLORS.length]));
+                });
+            });
+        } else if (data.metrics) {
+            const metricKeys = Object.keys(data.metrics);
+            metricKeys.forEach(m => {
+                const metricLabel = t('stats.correlations.metrics.' + m);
+                datasets.push(makeDs(metricLabel, data.metrics[m], COLORS[ci++ % COLORS.length]));
+            });
+        }
+
+        const xDimLabel = t('stats.correlations.dimensions.' + (data.x_axis || ''));
+        // Build Y axis label from selected metrics
+        const yMetricKeys = data.group_by && data.groups ? (data.metrics || []) : Object.keys(data.metrics || {});
+        const yLabel = yMetricKeys.map(m => t('stats.correlations.metrics.' + m)).join(', ');
+        const scalesConfig = isRadar ? {
+            r: { grid: { color: '#262626' }, ticks: { color: '#a3a3a3', backdropColor: 'transparent' }, pointLabels: { color: '#d4d4d4' } }
+        } : {
+            x: { grid: { color: '#262626' },
+                 title: { display: !isHorizontal, text: isHorizontal ? yLabel : xDimLabel, color: '#a3a3a3' },
+                 ticks: { color: '#a3a3a3', callback: isScatter ? (v => labels[v] || v) : undefined } },
+            y: { grid: { color: '#262626' },
+                 title: { display: true, text: isHorizontal ? xDimLabel : yLabel, color: '#a3a3a3' },
+                 ticks: { color: '#a3a3a3' } }
+        };
+        // Size chart card to fill remaining viewport (min 640px)
+        const card = document.getElementById('corr-chart-card');
+        const rect = card.getBoundingClientRect();
+        const availH = Math.max(640, window.innerHeight - rect.top - 24);
+        card.style.height = availH + 'px';
+
+        makeChart('chart-correlations', {
+            type,
+            data: { labels: isScatter ? undefined : labels, datasets },
+            options: {
+                indexAxis: isHorizontal ? 'y' : 'x',
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: isScatter ? 'nearest' : 'index', intersect: false },
+                plugins: { legend: { display: datasets.length > 1, position: 'bottom', align: 'center', labels: { color: '#a3a3a3', padding: 16, usePointStyle: true, pointStyle: 'circle' } },
+                    tooltip: {
+                        callbacks: {
+                            afterTitle: ctx => {
+                                if (isScatter && ctx[0]) {
+                                    const idx = ctx[0].raw.x;
+                                    const lbl = labels[idx] || '';
+                                    return lbl + (data.counts ? ' (' + data.counts[idx] + ' ' + t('stats.axes.photos').toLowerCase() + ')' : '');
+                                }
+                                if (data.counts && ctx[0]) return data.counts[ctx[0].dataIndex] + ' ' + t('stats.axes.photos').toLowerCase();
+                                return '';
+                            }
+                        }
+                    }
+                },
+                scales: scalesConfig
+            }
+        });
+    }
+
+    // Load gear tab on page load
+    loadTab('gear');
+    </script>
+</body>
+</html>

@@ -6,153 +6,17 @@ of a specific person with full sorting and filtering capabilities.
 """
 
 from flask import Blueprint, render_template_string, request, jsonify
-import sqlite3
 import math
-import json
-import os
-from db import DEFAULT_DB_PATH, apply_pragmas
+from viewer.config import VIEWER_CONFIG
+from viewer.types import SORT_OPTIONS, SORT_OPTIONS_GROUPED, VALID_SORT_COLS
+from viewer.db_helpers import (
+    get_db_connection, get_existing_columns,
+    PHOTO_BASE_COLS, PHOTO_OPTIONAL_COLS, split_photo_tags,
+    HIDE_BLINKS_SQL, HIDE_BURSTS_SQL
+)
+from viewer.filters import format_date
 
 person_bp = Blueprint('person', __name__)
-
-
-@person_bp.app_template_filter('js_escape')
-def js_escape(s):
-    """Escape a string for safe embedding inside a JavaScript string literal."""
-    if s is None:
-        return ''
-    # Escape backslashes first, then other special chars
-    s = s.replace('\\', '\\\\')
-    s = s.replace("'", "\\'")
-    s = s.replace('"', '\\"')
-    s = s.replace('\n', '\\n')
-    s = s.replace('\r', '\\r')
-    s = s.replace('\t', '\\t')
-    # Escape any other control characters
-    result = []
-    for c in s:
-        if ord(c) < 32:
-            result.append(f'\\x{ord(c):02x}')
-        else:
-            result.append(c)
-    return ''.join(result)
-
-
-# --- CONFIG ---
-def load_viewer_config():
-    """Load viewer settings from scoring_config.json."""
-    config_path = os.path.join(os.path.dirname(__file__), 'scoring_config.json')
-    defaults = {
-        'sort_options': {
-            'General': [
-                {'column': 'aggregate', 'label': 'Aggregate Score'},
-                {'column': 'aesthetic', 'label': 'Aesthetic'},
-                {'column': 'date_taken', 'label': 'Date Taken'}
-            ],
-            'Face Metrics': [
-                {'column': 'face_quality', 'label': 'Face Quality'},
-                {'column': 'eye_sharpness', 'label': 'Eye Sharpness'},
-                {'column': 'face_sharpness', 'label': 'Face Sharpness'},
-                {'column': 'face_ratio', 'label': 'Face Ratio'},
-                {'column': 'face_count', 'label': 'Face Count'}
-            ],
-            'Technical': [
-                {'column': 'tech_sharpness', 'label': 'Tech Sharpness'},
-                {'column': 'contrast_score', 'label': 'Contrast'},
-                {'column': 'noise_sigma', 'label': 'Noise Level'}
-            ],
-            'Color': [
-                {'column': 'color_score', 'label': 'Color Score'},
-                {'column': 'mean_saturation', 'label': 'Saturation'}
-            ],
-            'Exposure': [
-                {'column': 'exposure_score', 'label': 'Exposure Score'},
-                {'column': 'mean_luminance', 'label': 'Mean Luminance'},
-                {'column': 'histogram_spread', 'label': 'Histogram Spread'},
-                {'column': 'dynamic_range_stops', 'label': 'Dynamic Range'}
-            ],
-            'Composition': [
-                {'column': 'comp_score', 'label': 'Composition Score'},
-                {'column': 'power_point_score', 'label': 'Power Point Score'},
-                {'column': 'leading_lines_score', 'label': 'Leading Lines'},
-                {'column': 'isolation_bonus', 'label': 'Isolation Bonus'}
-            ],
-            'Camera': [
-                {'column': 'f_stop', 'label': 'F-Stop'},
-                {'column': 'focal_length', 'label': 'Focal Length'},
-                {'column': 'shutter_speed', 'label': 'Shutter Speed'}
-            ]
-        },
-        'pagination': {'default_per_page': 50},
-        'display': {'tags_per_photo': 3, 'card_width_px': 168, 'image_width_px': 160},
-        'notification_duration_ms': 2000
-    }
-    try:
-        with open(config_path) as f:
-            config = json.load(f)
-        viewer = config.get('viewer', {})
-        for key, value in defaults.items():
-            if key not in viewer:
-                viewer[key] = value
-            elif isinstance(value, dict):
-                for k, v in value.items():
-                    if k not in viewer[key]:
-                        viewer[key][k] = v
-        return viewer
-    except Exception:
-        return defaults
-
-
-VIEWER_CONFIG = load_viewer_config()
-
-
-# --- SORT OPTIONS ---
-def _build_sort_options():
-    """Build sort options from config - supports both flat and grouped formats."""
-    sort_opts = VIEWER_CONFIG.get('sort_options', {})
-    if isinstance(sort_opts, dict):
-        flat = []
-        for category, options in sort_opts.items():
-            for opt in options:
-                flat.append((opt['column'], opt['label']))
-        return flat, sort_opts
-    flat = [(opt['column'], opt['label']) for opt in sort_opts]
-    return flat, None
-
-
-SORT_OPTIONS, SORT_OPTIONS_GROUPED = _build_sort_options()
-VALID_SORT_COLS = [opt[0] for opt in SORT_OPTIONS]
-
-
-# --- DATABASE HELPERS ---
-def _get_viewer_perf():
-    """Load viewer.performance config (cached after first call)."""
-    global _viewer_perf_cache
-    try:
-        return _viewer_perf_cache
-    except NameError:
-        pass
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scoring_config.json')
-    try:
-        with open(config_path) as f:
-            config = json.load(f)
-        _viewer_perf_cache = config.get('viewer', {}).get('performance', {})
-    except Exception:
-        _viewer_perf_cache = {}
-    return _viewer_perf_cache
-
-def get_db_connection():
-    """Get database connection with WAL mode and row factory.
-
-    Uses viewer.performance overrides if configured, otherwise falls back
-    to global performance settings.
-    """
-    perf = _get_viewer_perf()
-    conn = sqlite3.connect(DEFAULT_DB_PATH)
-    apply_pragmas(conn,
-        mmap_size_mb=perf.get('mmap_size_mb'),
-        cache_size_mb=perf.get('cache_size_mb'))
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def get_person_info(person_id):
@@ -177,50 +41,77 @@ def get_person_info(person_id):
     }
 
 
-def get_existing_columns(conn):
-    """Get list of columns that exist in the photos table."""
-    cursor = conn.execute('PRAGMA table_info(photos)')
-    return {row[1] for row in cursor.fetchall()}
+def _query_person_photos(person_id, args):
+    """Shared query logic for person_page() and person_api().
 
+    Returns (photos, page, total_pages, total_count, sort_col, sort_label, params).
+    """
+    # Pagination
+    default_per_page = VIEWER_CONFIG['pagination']['default_per_page']
+    per_page = args.get('per_page', default_per_page, type=int)
+    page = args.get('page', 1, type=int)
+    offset = (page - 1) * per_page
 
-# --- TEMPLATE FILTERS ---
-def format_date(value):
-    """Format date_taken for display."""
-    if not value:
-        return ""
+    # Build params
+    params = {
+        'sort': args.get('sort', 'aggregate'),
+        'dir': args.get('dir', 'DESC'),
+        'hide_blinks': args.get('hide_blinks', ''),
+        'hide_bursts': args.get('hide_bursts', ''),
+        'date_from': args.get('date_from', ''),
+        'date_to': args.get('date_to', ''),
+    }
+
+    # Validate sort column
+    sort_col = params['sort'] if params['sort'] in VALID_SORT_COLS else 'aggregate'
+    sort_dir = 'ASC' if params['dir'] == 'ASC' else 'DESC'
+
+    # Build query with person filter
+    where_clauses = ["path IN (SELECT photo_path FROM faces WHERE person_id = ?)"]
+    sql_params = [person_id]
+
+    if params['hide_blinks'] == '1':
+        where_clauses.append(HIDE_BLINKS_SQL)
+    if params['hide_bursts'] == '1':
+        where_clauses.append(HIDE_BURSTS_SQL)
+    if params['date_from']:
+        date_from = params['date_from'].replace('-', ':')
+        where_clauses.append("date_taken >= ?")
+        sql_params.append(date_from)
+    if params['date_to']:
+        date_to = params['date_to'].replace('-', ':') + " 23:59:59"
+        where_clauses.append("date_taken <= ?")
+        sql_params.append(date_to)
+
+    where_sql = " AND ".join(where_clauses)
+
+    conn = get_db_connection()
     try:
-        from datetime import datetime
-        dt = datetime.strptime(value[:19], '%Y:%m:%d %H:%M:%S')
-        return dt.strftime('%d/%m/%Y %H:%M')
-    except (ValueError, TypeError):
-        return value.split(' ')[0].replace(':', '/')
+        total_count = conn.execute(
+            f"SELECT COUNT(*) FROM photos WHERE {where_sql}", sql_params
+        ).fetchone()[0]
+        total_pages = max(1, math.ceil(total_count / per_page))
 
+        existing_cols = get_existing_columns(conn)
+        select_cols = list(PHOTO_BASE_COLS) + [c for c in PHOTO_OPTIONAL_COLS if c in existing_cols]
 
-def safe_float(value, decimals=2):
-    """Safely format a value as float, handling None and bytes."""
-    if value is None:
-        return "0.00" if decimals == 2 else "0.0"
-    if isinstance(value, bytes):
-        return "N/A"
-    try:
-        fmt = f"%.{decimals}f"
-        return fmt % float(value)
-    except (ValueError, TypeError):
-        return "N/A"
+        query = f"""
+            SELECT {', '.join(select_cols)}
+            FROM photos
+            WHERE {where_sql}
+            ORDER BY {sort_col} {sort_dir}
+            LIMIT ? OFFSET ?
+        """
+        rows = conn.execute(query, sql_params + [per_page, offset]).fetchall()
 
+        tags_limit = VIEWER_CONFIG['display']['tags_per_photo']
+        photos = split_photo_tags(rows, tags_limit)
+    finally:
+        conn.close()
 
-def format_shutter(value):
-    """Format shutter speed as fraction (e.g., 0.01 -> 1/100)."""
-    if not value or value == 0:
-        return "?"
-    try:
-        val = float(value)
-        if val >= 1:
-            return f"{val:.1f}s"
-        else:
-            return f"1/{int(round(1/val))}"
-    except (ValueError, TypeError, ZeroDivisionError):
-        return "?"
+    sort_label = next((label for val, label in SORT_OPTIONS if val == sort_col), 'Score')
+
+    return photos, page, total_pages, total_count, sort_col, sort_label, params
 
 
 # --- TEMPLATE ---
@@ -601,7 +492,7 @@ PERSON_PAGE_TEMPLATE = '''
         function copySelected() {
             if (selectedPhotos.size === 0) return;
 
-            const filenames = Array.from(selectedPhotos.values()).map(function(d) { return d.filename; }).join('\\n');
+            const filenames = Array.from(selectedPhotos.values()).map(function(d) { return d.filename; }).join('\n');
             navigator.clipboard.writeText(filenames).then(function() {
                 const count = selectedPhotos.size;
                 showNotification('Copied ' + count + ' filename' + (count > 1 ? 's' : ''));
@@ -752,7 +643,7 @@ PERSON_PAGE_TEMPLATE = '''
                 }
 
                 // JS-escape for onclick handler (escape backslashes and quotes)
-                const jsEscape = (str) => str.replace(/\\\\/g, '\\\\\\\\').replace(/'/g, "\\\\'").replace(/"/g, '\\\\"');
+                const jsEscape = (str) => str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 
                 return `
                 <div class="photo-card bg-neutral-900 flex flex-col gap-1 rounded border border-neutral-800 p-1.5 hover:border-green-500 transition-all w-full sm:w-auto" style="max-width: 100%; --card-width: ${cardWidth}px">
@@ -856,22 +747,6 @@ PERSON_PAGE_TEMPLATE = '''
 '''
 
 
-# Register template filters for Jinja
-@person_bp.app_template_filter('format_date')
-def jinja_format_date(value):
-    return format_date(value)
-
-
-@person_bp.app_template_filter('safe_float')
-def jinja_safe_float(value, decimals=2):
-    return safe_float(value, decimals)
-
-
-@person_bp.app_template_filter('format_shutter')
-def jinja_format_shutter(value):
-    return format_shutter(value)
-
-
 # --- ROUTES ---
 @person_bp.route('/person/<int:person_id>')
 def person_page(person_id):
@@ -880,101 +755,10 @@ def person_page(person_id):
     if person_info is None:
         return "Person not found", 404
 
-    # Pagination
-    default_per_page = VIEWER_CONFIG['pagination']['default_per_page']
-    per_page = request.args.get('per_page', default_per_page, type=int)
-    page = request.args.get('page', 1, type=int)
-    offset = (page - 1) * per_page
-
-    # Build params
-    params = {
-        'sort': request.args.get('sort', 'aggregate'),
-        'dir': request.args.get('dir', 'DESC'),
-        'hide_blinks': request.args.get('hide_blinks', ''),
-        'hide_bursts': request.args.get('hide_bursts', ''),
-        'date_from': request.args.get('date_from', ''),
-        'date_to': request.args.get('date_to', ''),
-    }
-
-    # Validate sort column
-    sort_col = params['sort'] if params['sort'] in VALID_SORT_COLS else 'aggregate'
-    sort_dir = 'ASC' if params['dir'] == 'ASC' else 'DESC'
-
-    # Build query with person filter
-    where_clauses = ["path IN (SELECT photo_path FROM faces WHERE person_id = ?)"]
-    sql_params = [person_id]
-
-    # Additional filters
-    if params['hide_blinks'] == '1':
-        where_clauses.append("(is_blink IS NULL OR is_blink = 0)")
-    if params['hide_bursts'] == '1':
-        where_clauses.append("(is_burst_lead IS NULL OR is_burst_lead = 1)")
-    if params['date_from']:
-        date_from = params['date_from'].replace('-', ':')
-        where_clauses.append("date_taken >= ?")
-        sql_params.append(date_from)
-    if params['date_to']:
-        date_to = params['date_to'].replace('-', ':') + " 23:59:59"
-        where_clauses.append("date_taken <= ?")
-        sql_params.append(date_to)
-
-    where_sql = " AND ".join(where_clauses)
-
-    conn = get_db_connection()
     try:
-        # Get total count
-        total_count = conn.execute(
-            f"SELECT COUNT(*) FROM photos WHERE {where_sql}", sql_params
-        ).fetchone()[0]
-        total_pages = max(1, math.ceil(total_count / per_page))
-
-        # Get existing columns
-        existing_cols = get_existing_columns(conn)
-
-        # Select columns
-        base_cols = [
-            'path', 'filename', 'date_taken', 'camera_model', 'lens_model', 'iso',
-            'f_stop', 'shutter_speed', 'focal_length', 'aesthetic', 'face_count',
-            'face_quality', 'eye_sharpness', 'face_sharpness', 'face_ratio',
-            'tech_sharpness', 'color_score', 'exposure_score', 'comp_score',
-            'isolation_bonus', 'is_blink', 'is_burst_lead', 'aggregate'
-        ]
-        optional_cols = [
-            'is_monochrome', 'tags', 'composition_pattern', 'contrast_score',
-            'dynamic_range_stops', 'noise_sigma', 'mean_saturation',
-            'histogram_spread', 'mean_luminance', 'power_point_score',
-            'leading_lines_score', 'quality_score', 'category'
-        ]
-        select_cols = base_cols + [c for c in optional_cols if c in existing_cols]
-
-        # Fetch photos
-        query = f"""
-            SELECT {', '.join(select_cols)}
-            FROM photos
-            WHERE {where_sql}
-            ORDER BY {sort_col} {sort_dir}
-            LIMIT ? OFFSET ?
-        """
-        rows = conn.execute(query, sql_params + [per_page, offset]).fetchall()
-
-        # Convert to dicts and add tags_list
-        tags_limit = VIEWER_CONFIG['display']['tags_per_photo']
-        photos = []
-        for row in rows:
-            photo = dict(row)
-            if photo.get('tags'):
-                photo['tags_list'] = [t.strip() for t in photo['tags'].split(',')[:tags_limit]]
-            else:
-                photo['tags_list'] = []
-            photos.append(photo)
-
+        photos, page, total_pages, total_count, sort_col, sort_label, params = _query_person_photos(person_id, request.args)
     except Exception as e:
         return f"Database Error: {e}", 500
-    finally:
-        conn.close()
-
-    # Get sort label
-    sort_label = next((label for val, label in SORT_OPTIONS if val == sort_col), 'Score')
 
     return render_template_string(
         PERSON_PAGE_TEMPLATE,
@@ -998,98 +782,14 @@ def person_api(person_id):
     if person_info is None:
         return jsonify({'error': 'Person not found'}), 404
 
-    # Pagination
-    default_per_page = VIEWER_CONFIG['pagination']['default_per_page']
-    per_page = request.args.get('per_page', default_per_page, type=int)
-    page = request.args.get('page', 1, type=int)
-    offset = (page - 1) * per_page
-
-    # Build params
-    params = {
-        'sort': request.args.get('sort', 'aggregate'),
-        'dir': request.args.get('dir', 'DESC'),
-        'hide_blinks': request.args.get('hide_blinks', ''),
-        'hide_bursts': request.args.get('hide_bursts', ''),
-        'date_from': request.args.get('date_from', ''),
-        'date_to': request.args.get('date_to', ''),
-    }
-
-    # Validate sort column
-    sort_col = params['sort'] if params['sort'] in VALID_SORT_COLS else 'aggregate'
-    sort_dir = 'ASC' if params['dir'] == 'ASC' else 'DESC'
-
-    # Build query with person filter
-    where_clauses = ["path IN (SELECT photo_path FROM faces WHERE person_id = ?)"]
-    sql_params = [person_id]
-
-    # Additional filters
-    if params['hide_blinks'] == '1':
-        where_clauses.append("(is_blink IS NULL OR is_blink = 0)")
-    if params['hide_bursts'] == '1':
-        where_clauses.append("(is_burst_lead IS NULL OR is_burst_lead = 1)")
-    if params['date_from']:
-        date_from = params['date_from'].replace('-', ':')
-        where_clauses.append("date_taken >= ?")
-        sql_params.append(date_from)
-    if params['date_to']:
-        date_to = params['date_to'].replace('-', ':') + " 23:59:59"
-        where_clauses.append("date_taken <= ?")
-        sql_params.append(date_to)
-
-    where_sql = " AND ".join(where_clauses)
-
-    conn = get_db_connection()
     try:
-        # Get total count
-        total_count = conn.execute(
-            f"SELECT COUNT(*) FROM photos WHERE {where_sql}", sql_params
-        ).fetchone()[0]
-        total_pages = max(1, math.ceil(total_count / per_page))
-
-        # Get existing columns
-        existing_cols = get_existing_columns(conn)
-
-        # Select columns
-        base_cols = [
-            'path', 'filename', 'date_taken', 'camera_model', 'lens_model', 'iso',
-            'f_stop', 'shutter_speed', 'focal_length', 'aesthetic', 'face_count',
-            'face_quality', 'eye_sharpness', 'face_sharpness', 'face_ratio', 'tech_sharpness',
-            'color_score', 'exposure_score', 'comp_score', 'is_blink',
-            'aggregate', 'is_burst_lead', 'tags'
-        ]
-        optional_cols = [
-            'is_monochrome', 'isolation_bonus', 'contrast_score', 'dynamic_range_stops',
-            'composition_pattern', 'power_point_score', 'leading_lines_score',
-            'mean_saturation', 'noise_sigma', 'quality_score', 'category'
-        ]
-        select_cols = base_cols + [c for c in optional_cols if c in existing_cols]
-
-        # Fetch photos
-        query = f"""
-            SELECT {', '.join(select_cols)}
-            FROM photos
-            WHERE {where_sql}
-            ORDER BY {sort_col} {sort_dir}
-            LIMIT ? OFFSET ?
-        """
-        rows = conn.execute(query, sql_params + [per_page, offset]).fetchall()
-
-        # Convert to list of dicts
-        tags_limit = VIEWER_CONFIG['display']['tags_per_photo']
-        photos = []
-        for row in rows:
-            photo = dict(row)
-            if photo.get('tags'):
-                photo['tags_list'] = [t.strip() for t in photo['tags'].split(',')[:tags_limit]]
-            else:
-                photo['tags_list'] = []
-            photo['date_formatted'] = format_date(photo.get('date_taken'))
-            photos.append(photo)
-
+        photos, page, total_pages, total_count, sort_col, _, _ = _query_person_photos(person_id, request.args)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        conn.close()
+
+    # Add formatted date for JS rendering
+    for photo in photos:
+        photo['date_formatted'] = format_date(photo.get('date_taken'))
 
     return jsonify({
         'photos': photos,

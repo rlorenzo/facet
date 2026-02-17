@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('merge_suggestions.title') }} - Facet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .group-card { transition: all 0.3s; }
+        .group-card.merged { opacity: 0; transform: translateX(100%); height: 0; padding: 0; margin: 0; overflow: hidden; }
+        .person-item:hover { border-color: #3b82f6; }
+        .toast { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-neutral-950 text-white min-h-screen">
+    <header class="bg-neutral-900 border-b border-neutral-800 px-6 py-3 sticky top-0 z-40">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="/manage_persons" class="text-neutral-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+                <h1 class="text-xl font-semibold">{{ _('merge_suggestions.title') }}</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-neutral-400">{{ _('merge_suggestions.threshold') }}:</span>
+                <select id="threshold-select" onchange="changeThreshold(this.value)" class="bg-neutral-800 text-white text-sm px-2 py-1.5 rounded border border-neutral-700 focus:border-blue-500 focus:outline-none">
+                    {% for pct in range(45, 96) %}
+                    <option value="0.{{ '%02d' % pct }}" {% if (threshold * 100) | round | int == pct %}selected{% endif %}>{{ pct }}%</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-6 mx-auto">
+        <div id="subtitle" class="text-neutral-400 mb-6"></div>
+
+        <div id="loading-state" class="text-center py-16">
+            <svg class="animate-spin w-12 h-12 mx-auto text-blue-500 mb-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-neutral-400 text-lg">{{ _('merge_suggestions.loading') }}</p>
+        </div>
+
+        <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start hidden">
+            <!-- Groups loaded via JS -->
+        </div>
+
+        <div id="empty-state" class="hidden text-center py-16">
+            <svg class="w-16 h-16 mx-auto text-neutral-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-neutral-400 text-lg">{{ _('merge_suggestions.no_suggestions') }}</p>
+        </div>
+
+        <div id="all-done-state" class="hidden text-center py-16">
+            <svg class="w-16 h-16 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-green-400 text-lg">{{ _('merge_suggestions.all_reviewed') }}</p>
+        </div>
+    </main>
+
+    <!-- Toast notification -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 toast">
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- Hover preview (positioned by JS) -->
+    <div id="hover-preview" class="hidden fixed z-[100] pointer-events-none">
+        <img id="hover-preview-img" class="w-32 h-32 rounded-full object-cover border-2 border-blue-500 shadow-lg shadow-blue-500/20" src="" alt="">
+        <div id="hover-preview-name" class="text-xs text-center text-neutral-300 mt-1 bg-neutral-900 px-2 py-1 rounded"></div>
+    </div>
+
+    <script>
+        // i18n translations
+        const I18N = {{ js_translations(['merge_suggestions', 'manage_persons', 'notifications', 'ui']) | tojson | safe }};
+        function t(key, vars={}) {
+            const keys = key.split('.');
+            let value = I18N;
+            for (const k of keys) {
+                if (value && typeof value === 'object' && k in value) {
+                    value = value[k];
+                } else {
+                    return key;
+                }
+            }
+            if (typeof value === 'string' && Object.keys(vars).length > 0) {
+                return value.replace(/\{(\w+)\}/g, (m, k) => vars[k] !== undefined ? vars[k] : m);
+            }
+            return value || key;
+        }
+
+        let currentGroups = [];
+        const threshold = {{ threshold }};
+
+        async function loadGroups() {
+            const loadingState = document.getElementById('loading-state');
+            const groupsContainer = document.getElementById('groups-container');
+            try {
+                const response = await fetch(`/api/merge_groups?threshold=${threshold}`);
+                const data = await response.json();
+                currentGroups = data.groups;
+                // Sort by number of persons per group (descending)
+                currentGroups.sort((a, b) => b.persons.length - a.persons.length);
+                loadingState.classList.add('hidden');
+                groupsContainer.classList.remove('hidden');
+                renderGroups();
+            } catch (err) {
+                console.error('Failed to load groups:', err);
+                loadingState.innerHTML = `
+                    <svg class="w-12 h-12 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-red-400 text-lg">${t('merge_suggestions.load_error')}</p>
+                `;
+            }
+        }
+
+        function renderGroups() {
+            const container = document.getElementById('groups-container');
+            const emptyState = document.getElementById('empty-state');
+            const subtitle = document.getElementById('subtitle');
+
+            if (currentGroups.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                subtitle.textContent = '';
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            subtitle.textContent = t('merge_suggestions.subtitle', {count: currentGroups.length});
+
+            container.innerHTML = currentGroups.map((group, idx) => `
+                <div class="group-card bg-neutral-900 border border-neutral-800 rounded-lg p-3" data-group-index="${idx}">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-neutral-400 text-xs font-medium">${t('merge_suggestions.group_label', {n: idx + 1})}</span>
+                            <span class="text-[10px] text-neutral-500">(${group.persons.length})</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-400">
+                                ${(group.avg_similarity * 100).toFixed(0)}%
+                            </span>
+                            <button onclick="dismissGroup(${idx})" class="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-red-400 transition-colors" title="${t('ui.buttons.dismiss')}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 justify-center">
+                        ${group.persons.map(p => `
+                            <div class="person-item relative flex flex-col items-center bg-neutral-800 border border-neutral-700 rounded-lg p-1.5 hover:border-blue-500 transition-colors"
+                                 data-person-id="${p.id}" data-person-name="${(p.name || 'Person ' + p.id).replace(/"/g, '&quot;')}">
+                                <button onclick="removePersonFromGroup(${idx}, ${p.id})" class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-600 hover:bg-red-500 rounded-full flex items-center justify-center text-white transition-colors z-10" title="${t('ui.buttons.remove')}">
+                                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                                <a href="/?person=${p.id}" target="_blank">
+                                    <img src="/person_thumbnail/${p.id}" class="w-12 h-12 rounded-full object-cover" loading="lazy" alt="">
+                                </a>
+                                <div class="text-[10px] text-neutral-300 truncate max-w-[60px] mt-1">${p.name || 'Person ' + p.id}</div>
+                                <button onclick="mergeInto(${idx}, ${p.id})" ${group.persons.length < 2 ? 'disabled' : ''} class="mt-1 px-2 py-0.5 ${group.persons.length < 2 ? 'bg-neutral-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'} text-white text-[10px] rounded transition-colors">
+                                    ${t('ui.buttons.merge')}
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function dismissGroup(groupIndex) {
+            currentGroups.splice(groupIndex, 1);
+            renderGroups();
+
+            const subtitle = document.getElementById('subtitle');
+            if (currentGroups.length > 0) {
+                subtitle.textContent = t('merge_suggestions.subtitle', {count: currentGroups.length});
+            } else {
+                subtitle.textContent = '';
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        }
+
+        function removePersonFromGroup(groupIndex, personId) {
+            const group = currentGroups[groupIndex];
+            group.persons = group.persons.filter(p => p.id !== personId);
+
+            // If only 1 person left, remove the entire group
+            if (group.persons.length < 2) {
+                currentGroups.splice(groupIndex, 1);
+            }
+
+            // Re-render
+            renderGroups();
+
+            // Update subtitle
+            const subtitle = document.getElementById('subtitle');
+            if (currentGroups.length > 0) {
+                subtitle.textContent = t('merge_suggestions.subtitle', {count: currentGroups.length});
+            } else {
+                subtitle.textContent = '';
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        }
+
+        async function mergeInto(groupIndex, targetId) {
+            const group = currentGroups[groupIndex];
+            const sourceIds = group.persons.filter(p => p.id !== targetId).map(p => p.id);
+            const targetPerson = group.persons.find(p => p.id === targetId);
+
+            if (sourceIds.length === 0) {
+                alert('Cannot merge a person into itself');
+                return;
+            }
+
+            try {
+                const response = await fetch('/merge_persons_batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ source_ids: sourceIds, target_id: targetId })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Animate and remove the group card
+                    const card = document.querySelector(`[data-group-index="${groupIndex}"]`);
+                    if (card) {
+                        card.classList.add('merged');
+                        setTimeout(() => card.remove(), 300);
+                    }
+
+                    // Remove from array
+                    currentGroups.splice(groupIndex, 1);
+
+                    // Update subtitle
+                    const subtitle = document.getElementById('subtitle');
+                    if (currentGroups.length > 0) {
+                        subtitle.textContent = t('merge_suggestions.subtitle', {count: currentGroups.length});
+                        // Re-render to fix group indices
+                        setTimeout(renderGroups, 350);
+                    } else {
+                        subtitle.textContent = '';
+                        document.getElementById('all-done-state').classList.remove('hidden');
+                    }
+
+                    // Show toast
+                    showToast(t('merge_suggestions.merged_success', {
+                        count: sourceIds.length,
+                        name: targetPerson.name || 'Person ' + targetId
+                    }));
+                } else {
+                    alert(t('notifications.error_merging') + ': ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert(t('notifications.error_merging') + ': ' + err.message);
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function changeThreshold(newThreshold) {
+            window.location.href = `/suggest_merges?threshold=${newThreshold}`;
+        }
+
+        // Hover preview handling
+        const hoverPreview = document.getElementById('hover-preview');
+        const hoverPreviewImg = document.getElementById('hover-preview-img');
+        const hoverPreviewName = document.getElementById('hover-preview-name');
+
+        document.getElementById('groups-container').addEventListener('mouseenter', (e) => {
+            const personItem = e.target.closest('.person-item');
+            if (!personItem) return;
+
+            const personId = personItem.dataset.personId;
+            const personName = personItem.dataset.personName;
+
+            hoverPreviewImg.src = `/person_thumbnail/${personId}`;
+            hoverPreviewName.textContent = personName;
+
+            const rect = personItem.getBoundingClientRect();
+            let top = rect.top - 160;
+            let left = rect.left + (rect.width / 2) - 64;
+
+            // Keep preview within viewport
+            if (top < 10) top = rect.bottom + 10;
+            if (left < 10) left = 10;
+            if (left + 128 > window.innerWidth - 10) left = window.innerWidth - 138;
+
+            hoverPreview.style.top = top + 'px';
+            hoverPreview.style.left = left + 'px';
+            hoverPreview.classList.remove('hidden');
+        }, true);
+
+        document.getElementById('groups-container').addEventListener('mouseleave', (e) => {
+            const personItem = e.target.closest('.person-item');
+            if (!personItem) return;
+            hoverPreview.classList.add('hidden');
+        }, true);
+
+        // Load groups on page load
+        loadGroups();
+    </script>
+</body>
+</html>
