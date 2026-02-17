@@ -14,8 +14,15 @@ A multi-dimensional photo analysis engine that examines every facet of an image 
 ### Smart Photo Gallery
 
 <img src="docs/screenshots/gallery-compact.jpg" alt="Compact gallery view" width="100%">
+<img src="docs/screenshots/hover-preview.jpg" alt="Hover preview with score breakdown" width="100%">
 
 Dark-themed web gallery with infinite scroll, 24 sort options across 6 groups, 30 content categories, and responsive mobile layout. Hover any photo for a detailed score breakdown with EXIF data, per-metric scores, and composition patterns.
+
+### Top Picks
+
+<img src="docs/screenshots/gallery-top-picks.jpg" alt="Top Picks view" width="100%">
+
+Curated selection using a custom weighted score (aesthetic, composition, face quality). Configurable minimum score threshold and face ratio to surface the best photos across the entire library.
 
 ### AI-Powered Quality Scoring
 
@@ -30,6 +37,7 @@ Scores every photo using [TOPIQ](https://github.com/chaofengc/IQA-PyTorch) (0.93
 ### Face Recognition & Person Management
 
 <img src="docs/screenshots/manage-persons.jpg" alt="Person management" width="100%">
+<img src="docs/screenshots/person-gallery.jpg" alt="Person gallery" width="100%">
 
 Automatic face detection via InsightFace with 106-point landmarks, HDBSCAN clustering into persons, blink detection (EAR-based), and a management UI for merging, renaming, and organizing person clusters. Supports GPU-accelerated clustering via cuML for large libraries.
 
@@ -41,7 +49,13 @@ Filter drawer with 50+ options organized in collapsible sections: display toggle
 
 ### Statistics & Analytics
 
-<img src="docs/screenshots/stats-dashboard.png" alt="Statistics dashboard" width="100%">
+<table><tr>
+<td><img src="docs/screenshots/stats-gear.png" alt="Equipment stats" width="100%"></td>
+<td><img src="docs/screenshots/stats-settings.png" alt="Shooting settings stats" width="100%"></td>
+</tr><tr>
+<td><img src="docs/screenshots/stats-timeline.png" alt="Timeline stats" width="100%"></td>
+<td><img src="docs/screenshots/stats-correlations.png" alt="Correlation charts" width="100%"></td>
+</tr></table>
 
 Interactive dashboards with four tabs: gear usage (cameras, lenses, body+lens combos, category distribution), shooting settings (ISO, aperture, focal length, shutter speed, score distribution), timeline heatmaps, and configurable correlation charts.
 
