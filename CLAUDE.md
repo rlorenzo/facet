@@ -31,6 +31,8 @@ python photos.py /path/to/photos --single-pass
 python photos.py /path/to/photos --pass quality      # TOPIQ only
 python photos.py /path/to/photos --pass tags         # Configured tagger only
 python photos.py /path/to/photos --pass composition  # SAMP-Net only
+python photos.py /path/to/photos --pass faces        # InsightFace only
+python photos.py /path/to/photos --pass embeddings   # CLIP embeddings only
 
 # Force re-scan of already processed files
 python photos.py /path/to/photos --force
@@ -41,6 +43,7 @@ python photos.py /path/to/photos --dry-run --dry-run-count 20
 
 # Re-tag photos with configured tagger model
 python photos.py --recompute-tags
+python photos.py --recompute-tags-vlm    # Re-tag using VLM tagger
 
 # List available models and VRAM requirements
 python photos.py --list-models
@@ -98,9 +101,9 @@ python viewer.py
 
 ## Dependencies
 
-Python packages: `torch`, `torchvision`, `open-clip-torch`, `opencv-python`, `pillow`, `imagehash`, `rawpy`, `flask`, `numpy`, `tqdm`, `exifread`, `insightface`, `scipy`, `scikit-learn`, `hdbscan`, `pyiqa`
+Python packages: `torch`, `torchvision`, `open-clip-torch`, `opencv-python`, `pillow`, `imagehash`, `rawpy`, `flask`, `numpy`, `tqdm`, `exifread`, `insightface`, `scipy`, `scikit-learn`, `hdbscan`, `pyiqa`, `psutil`
 
-For VLM tagging (16gb+ profiles): `transformers>=4.57.0`, `accelerate>=0.25.0`
+For VLM tagging (8gb+ profiles): `transformers>=4.57.0`, `accelerate>=0.25.0`
 
 For GPU face clustering (optional): `cuml`, `cupy` (requires conda + CUDA)
 
@@ -133,10 +136,10 @@ External tool: `exiftool` (command-line)
 
 | Profile | Models | Use Case |
 |---------|--------|----------|
-| `legacy` | TOPIQ + SAMP-Net (CPU) | No GPU, 8GB+ RAM |
-| `8gb` | TOPIQ + SAMP-Net + Qwen3-VL | 6-14GB VRAM |
-| `16gb` | TOPIQ + SAMP-Net | Best aesthetic accuracy (~14GB) |
-| `24gb` | TOPIQ + Qwen2-VL | Composition explanations (~18GB) |
+| `legacy` | CLIP+MLP + SAMP-Net + CLIP tagging (CPU) | No GPU, 8GB+ RAM |
+| `8gb` | CLIP+MLP + SAMP-Net + Qwen3-VL | 6-14GB VRAM |
+| `16gb` | TOPIQ + SAMP-Net + Qwen3-VL | Best aesthetic accuracy (~14GB) |
+| `24gb` | TOPIQ + Qwen2-VL + Qwen2.5-VL-7B | Composition explanations (~18GB) |
 
 ### Data Flow
 
@@ -217,17 +220,17 @@ The "Top Picks" filter in the viewer uses a custom weighted score computed on-th
   "top_picks_min_score": 7,
   "top_picks_min_face_ratio": 0.20,
   "top_picks_weights": {
-    "aggregate_percent": 10,
-    "aesthetic_percent": 35,
-    "composition_percent": 25,
-    "face_quality_percent": 30
+    "aggregate_percent": 30,
+    "aesthetic_percent": 28,
+    "composition_percent": 18,
+    "face_quality_percent": 24
   }
 }
 ```
 
 **Score computation:**
-- With significant face (face_ratio >= 20%): `aggregate * 0.10 + aesthetic * 0.35 + comp_score * 0.25 + face_quality * 0.30`
-- Without significant face: `aggregate * 0.10 + aesthetic * 0.525 + comp_score * 0.375` (face_quality weight redistributed)
+- With significant face (face_ratio >= 20%): `aggregate * 0.30 + aesthetic * 0.28 + comp_score * 0.18 + face_quality * 0.24`
+- Without significant face: `aggregate * 0.30 + aesthetic * 0.426 + comp_score * 0.274` (face_quality weight redistributed proportionally)
 
 The `top_picks_score` is computed in SQL via `get_top_picks_score_sql()` in `viewer.py`.
 
@@ -419,9 +422,9 @@ For quick reference, here are the actual defaults from the config file:
 
 | Section | Key | Default |
 |---------|-----|---------|
-| `burst_detection` | `similarity_threshold_percent` | `65` |
-| `burst_detection` | `time_window_minutes` | `2` |
-| `burst_detection` | `rapid_burst_seconds` | `0.5` |
+| `burst_detection` | `similarity_threshold_percent` | `70` |
+| `burst_detection` | `time_window_minutes` | `0.8` |
+| `burst_detection` | `rapid_burst_seconds` | `0.4` |
 | `duplicate_detection` | `similarity_threshold_percent` | `90` |
 | `face_detection` | `min_confidence_percent` | `65` |
 | `face_detection` | `blink_ear_threshold` | `0.28` |
@@ -432,8 +435,8 @@ For quick reference, here are the actual defaults from the config file:
 | `face_clustering` | `use_gpu` | `"auto"` |
 | `models` | `keep_in_ram` | `"auto"` |
 | `viewer` | `edition_password` | `""` (empty = disabled) |
-| `viewer.pagination` | `default_per_page` | `25` |
-| `viewer.dropdowns` | `min_photos_for_person` | `1` |
+| `viewer.pagination` | `default_per_page` | `64` |
+| `viewer.dropdowns` | `min_photos_for_person` | `10` |
 | `viewer.defaults` | `type` | `""` (empty = All Photos) |
 | `viewer.defaults` | `sort` | `"aggregate"` |
 | `viewer.defaults` | `sort_direction` | `"DESC"` |
