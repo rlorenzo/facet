@@ -76,14 +76,21 @@ def _build_gallery_where(params, conn=None):
         where_clauses.append("composition_pattern = ?")
         sql_params.append(params['composition_pattern'])
 
-    # Person filter (face recognition) - uses EXISTS for better performance
+    # Person filter (face recognition) - supports comma-separated IDs
     if params.get('person'):
-        try:
-            person_id = int(params['person'])
+        person_ids = []
+        for pid in params['person'].split(','):
+            try:
+                person_ids.append(int(pid.strip()))
+            except ValueError:
+                pass
+        if len(person_ids) == 1:
             where_clauses.append("EXISTS (SELECT 1 FROM faces WHERE photo_path = photos.path AND person_id = ?)")
-            sql_params.append(person_id)
-        except ValueError:
-            pass
+            sql_params.append(person_ids[0])
+        elif len(person_ids) > 1:
+            placeholders = ','.join(['?'] * len(person_ids))
+            where_clauses.append(f"EXISTS (SELECT 1 FROM faces WHERE photo_path = photos.path AND person_id IN ({placeholders}))")
+            sql_params.extend(person_ids)
 
     # B&W filter
     if params.get('is_monochrome') == '1':
@@ -436,8 +443,12 @@ def index():
                 label = dict(QUALITY_LEVELS).get(v, v)
                 active_filters[k] = label
             elif k == 'person':
-                label = person_names.get(v, f'Person {v}')
-                active_filters[k] = label
+                for pid in v.split(','):
+                    pid = pid.strip()
+                    if pid:
+                        label = person_names.get(pid, f'Person {pid}')
+                        active_filters[f'person:{pid}'] = label
+                continue
             else:
                 active_filters[k] = v
 

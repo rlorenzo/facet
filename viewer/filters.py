@@ -69,6 +69,16 @@ def js_escape(s):
     return s.replace('\\', '\\\\').replace("'", "\\'").replace('"', '\\"')
 
 
+def urlencode_remove_person(params, person_id):
+    """Encode params with one person ID removed from the comma-separated person list."""
+    from urllib.parse import urlencode
+    updated = dict(params)
+    if 'person' in updated:
+        ids = [p.strip() for p in updated['person'].split(',') if p.strip() != str(person_id)]
+        updated['person'] = ','.join(ids)
+    return urlencode({k: v for k, v in updated.items() if v})
+
+
 def register_filters(app):
     """Register all template filters on the Flask app."""
     app.template_filter('format_date')(format_date)
@@ -78,3 +88,4 @@ def register_filters(app):
     app.template_filter('urlencode_without')(urlencode_without)
     app.template_filter('urlencode_with')(urlencode_with)
     app.template_filter('js_escape')(js_escape)
+    app.template_filter('urlencode_remove_person')(urlencode_remove_person)

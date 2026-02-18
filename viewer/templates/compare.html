@@ -34,7 +34,7 @@
 </head>
 <body class="bg-neutral-950 text-white min-h-screen">
     <header class="bg-neutral-900 border-b border-neutral-800 px-6 py-4">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <a href="/" class="text-neutral-400 hover:text-white">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,28 +44,14 @@
                 <h1 class="text-xl font-bold">{{ _('compare.header') }} — <span id="header-category">{{ selected_category }}</span></h1>
             </div>
             <div class="flex items-center gap-4">
-                <div class="text-sm text-neutral-400">
-                    <span id="comparison-count">{{ selected_category_count }}</span> / {{ min_comparisons }} {{ _('compare.comparisons') }}
-                </div>
-                <div class="w-48 bg-neutral-800 rounded-full h-2">
-                    <div class="progress-bar bg-purple-600 h-2 rounded-full" style="width: {{ progress_pct }}%"></div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <main class="p-6">
-        <div class="max-w-6xl mx-auto">
-            <!-- Category & Strategy Selector -->
-            <div class="mb-6 flex items-center gap-4 flex-wrap">
                 <label class="text-neutral-400 text-sm">{{ _('compare.category') }}:</label>
-                <select id="category-filter" class="bg-neutral-800 text-white text-sm px-3 py-2 rounded border border-neutral-700 border-purple-500">
+                <select id="category-filter" class="bg-neutral-800 text-white text-sm px-3 py-1.5 rounded border border-neutral-700 border-purple-500">
                     {% for cat in categories %}
                     <option value="{{ cat }}" {{ 'selected' if cat == selected_category else '' }}>{{ cat }}</option>
                     {% endfor %}
                 </select>
-                <label class="text-neutral-400 text-sm ml-4">{{ _('compare.strategy') }}:</label>
-                <select id="strategy" class="bg-neutral-800 text-white text-sm px-3 py-2 rounded border border-neutral-700">
+                <label class="text-neutral-400 text-sm">{{ _('compare.strategy') }}:</label>
+                <select id="strategy" class="bg-neutral-800 text-white text-sm px-3 py-1.5 rounded border border-neutral-700">
                     <option value="uncertainty" {{ 'selected' if strategy == 'uncertainty' else '' }}>{{ _('compare.strategies.uncertainty') }}</option>
                     <option value="boundary" {{ 'selected' if strategy == 'boundary' else '' }}>{{ _('compare.strategies.boundary') }}</option>
                     <option value="active" {{ 'selected' if strategy == 'active' else '' }}>{{ _('compare.strategies.active') }}</option>
@@ -76,9 +62,25 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </button>
-                <span class="text-neutral-500 text-sm ml-auto">{{ _('compare.keyboard.hint') }} <span class="keyboard-hint">A</span> {{ _('compare.keyboard.left_wins') }}, <span class="keyboard-hint">B</span> {{ _('compare.keyboard.right_wins') }}, <span class="keyboard-hint">T</span> {{ _('compare.keyboard.equal') }}, <span class="keyboard-hint">S</span> {{ _('compare.keyboard.skip') }}</span>
+                <button id="keyboard-help-btn" class="text-neutral-400 hover:text-white" title="{{ _('compare.keyboard.hint') }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3C7.03 3 3 6.13 3 10v1a2 2 0 002 2h14a2 2 0 002-2v-1c0-3.87-4.03-7-9-7zM5 15h14v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1zM7 7h2v2H7V7zm4 0h2v2h-2V7zm4 0h2v2h-2V7zM8 10h8v1H8v-1z"/>
+                    </svg>
+                </button>
+                <div class="border-l border-neutral-700 pl-4 flex items-center gap-3">
+                    <div class="text-sm text-neutral-400">
+                        <span id="comparison-count">{{ selected_category_count }}</span> / {{ min_comparisons }} {{ _('compare.comparisons') }}
+                    </div>
+                    <div class="w-48 bg-neutral-800 rounded-full h-2">
+                        <div class="progress-bar bg-purple-600 h-2 rounded-full" style="width: {{ progress_pct }}%"></div>
+                    </div>
+                </div>
             </div>
+        </div>
+    </header>
 
+    <main class="p-6">
+        <div class="max-w-6xl mx-auto">
             <!-- Strategy Help Panel (hidden by default) -->
             <div id="strategy-help-panel" class="hidden mb-6 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
                 <h4 class="font-bold text-white mb-3">{{ _('compare.strategy_help.title') }}</h4>
@@ -100,6 +102,11 @@
                         <p class="text-neutral-300 mt-1">{{ _('compare.strategy_help.random_desc') }}</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Keyboard Shortcuts Panel (hidden by default) -->
+            <div id="keyboard-help-panel" class="hidden mb-6 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
+                <span class="text-neutral-300">{{ _('compare.keyboard.hint') }} <span class="keyboard-hint">A</span> {{ _('compare.keyboard.left_wins') }}, <span class="keyboard-hint">B</span> {{ _('compare.keyboard.right_wins') }}, <span class="keyboard-hint">T</span> {{ _('compare.keyboard.equal') }}, <span class="keyboard-hint">S</span> {{ _('compare.keyboard.skip') }}</span>
             </div>
 
             <!-- Photo Comparison Area -->
@@ -225,46 +232,13 @@
             </div>
 
             <!-- Action Buttons - Primary Row -->
-            <div class="mt-6 flex justify-center gap-3">
+            <div class="mt-6 flex justify-center gap-4">
                 <button onclick="selectWinner('tie')" class="bg-neutral-700 hover:bg-neutral-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium ring-1 ring-neutral-600" title="{{ _('compare.tooltips.equal_quality') }}">
                     {{ _('compare.actions.equal_quality') }}
                 </button>
                 <button onclick="selectWinner('skip')" class="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-8 py-2.5 rounded-lg text-sm font-medium ring-1 ring-neutral-700" title="{{ _('compare.tooltips.cant_compare') }}">
                     {{ _('compare.actions.cant_compare') }}
                 </button>
-            </div>
-
-            <!-- Action Buttons - Secondary Row -->
-            <div class="mt-3 flex justify-center items-center gap-6 flex-wrap">
-                <div class="flex gap-1 ring-1 ring-neutral-700 rounded-lg overflow-hidden">
-                    <button id="suggest-weights"
-                            class="bg-green-700 hover:bg-green-600 text-white px-4 py-1.5 text-sm"
-                            title="{{ _('compare.tooltips.suggest_weights') }}">
-                        {{ _('compare.actions.suggest_weights') }}
-                    </button>
-                    <button id="apply-weights"
-                            class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-1.5 text-sm"
-                            title="{{ _('compare.tooltips.apply_config') }}">
-                        {{ _('compare.actions.apply_config') }}
-                    </button>
-                    <button id="recalculate-btn" onclick="recalculateScores()"
-                            class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-1.5 text-sm"
-                            title="{{ _('compare.tooltips.recalculate') }}">
-                        {{ _('compare.actions.recalculate') }}
-                    </button>
-                </div>
-                <div class="flex gap-1 ring-1 ring-neutral-700 rounded-lg overflow-hidden">
-                    <button id="reset-weights"
-                            class="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-1.5 text-sm"
-                            title="{{ _('compare.tooltips.reset_weights') }}">
-                        {{ _('compare.actions.reset_weights') }}
-                    </button>
-                    <button onclick="resetComparisons()"
-                            class="bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 text-sm"
-                            title="{{ _('compare.tooltips.reset_all') }}">
-                        {{ _('compare.actions.reset_all') }}
-                    </button>
-                </div>
             </div>
 
             <!-- Session Stats (Compact) -->
@@ -313,10 +287,41 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </button>
+                    <div class="ml-auto flex items-center gap-4">
+                        <div class="flex gap-1 ring-1 ring-neutral-700 rounded-lg overflow-hidden">
+                            <button id="suggest-weights"
+                                    class="bg-green-700 hover:bg-green-600 text-white px-4 py-1.5 text-sm"
+                                    title="{{ _('compare.tooltips.suggest_weights') }}">
+                                {{ _('compare.actions.suggest_weights') }}
+                            </button>
+                            <button id="apply-weights"
+                                    class="bg-purple-700 hover:bg-purple-600 text-white px-4 py-1.5 text-sm"
+                                    title="{{ _('compare.tooltips.apply_config') }}">
+                                {{ _('compare.actions.apply_config') }}
+                            </button>
+                            <button id="recalculate-btn" onclick="recalculateScores()"
+                                    class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-1.5 text-sm"
+                                    title="{{ _('compare.tooltips.recalculate') }}">
+                                {{ _('compare.actions.recalculate') }}
+                            </button>
+                        </div>
+                        <div class="flex gap-1 ring-1 ring-neutral-700 rounded-lg overflow-hidden">
+                            <button id="reset-weights"
+                                    class="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-1.5 text-sm"
+                                    title="{{ _('compare.tooltips.reset_weights') }}">
+                                {{ _('compare.actions.reset_weights') }}
+                            </button>
+                            <button onclick="resetComparisons()"
+                                    class="bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 text-sm"
+                                    title="{{ _('compare.tooltips.reset_all') }}">
+                                {{ _('compare.actions.reset_all') }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- How It Works (hidden by default) -->
-                <div id="weight-help-panel" class="hidden mb-4 p-4 bg-neutral-800 rounded-lg text-sm border border-neutral-700">
+                <div id="weight-help-panel" class="hidden mb-4 p-4 bg-neutral-800 rounded-lg border border-neutral-700">
                     <h4 class="font-bold text-white mb-3">{{ _('compare.weights.help.title') }}</h4>
                     <div class="space-y-3 text-neutral-300">
                         <div>
@@ -340,7 +345,7 @@
                             <p class="mt-1">{{ _('compare.weights.help.step4_desc') }}</p>
                         </div>
                     </div>
-                    <div class="mt-3 p-2 bg-neutral-900 rounded text-xs text-neutral-400">
+                    <div class="mt-3 p-2 bg-neutral-900 rounded text-neutral-400">
                         <strong>Tip:</strong> {{ _('compare.weights.help.tip') }}
                     </div>
                 </div>
@@ -366,13 +371,13 @@
                     </div>
                 </div>
                 <!-- Unified Score Preview & Weight Grid -->
-                <div class="bg-neutral-800 p-4 rounded">
+                <div class="">
                     <!-- Compact Score Preview Header -->
                     <div class="flex items-center justify-between mb-3">
                         <h4 class="font-bold">{{ _('compare.weights.score_preview') }}</h4>
-                        <span class="text-sm">{{ _('compare.weights.category_label') }}: <span id="category-name" class="text-purple-400">-</span></span>
+                        <span>{{ _('compare.weights.category_label') }}: <span id="category-name" class="text-purple-400">-</span></span>
                     </div>
-                    <div class="grid grid-cols-2 gap-4 text-sm mb-4 pb-3 border-b border-neutral-700">
+                    <div class="flex flex-col gap-1 text-sm mb-4 pb-3 border-b border-neutral-700">
                         <div class="flex items-center gap-2">
                             <span class="text-neutral-400">{{ _('compare.photo_a') }}:</span>
                             <span id="preview-a-current" class="text-purple-400">-</span>
@@ -389,10 +394,10 @@
                         </div>
                     </div>
                     <!-- Column headers for unified grid -->
-                    <div class="flex items-center gap-2 text-xs text-neutral-500 mb-2 px-1">
+                    <div class="flex items-center gap-2 text-neutral-500 mb-2 px-1">
                         <span class="w-24">{{ _('compare.weights.property') }}</span>
-                        <span class="w-12 text-right">{{ _('compare.weights.col_a') }}</span>
-                        <span class="w-12 text-right">{{ _('compare.weights.col_b') }}</span>
+                        <span class="w-12 text-center">{{ _('compare.weights.col_a') }}</span>
+                        <span class="w-12 text-center">{{ _('compare.weights.col_b') }}</span>
                         <span class="flex-1 text-center">{{ _('compare.weights.col_weight') }}</span>
                         <span class="w-8 text-right">{{ _('compare.weights.col_pct') }}</span>
                         <span class="w-6"></span>
@@ -763,6 +768,12 @@
             panel.classList.toggle('hidden');
         });
 
+        // Keyboard help toggle
+        document.getElementById('keyboard-help-btn').addEventListener('click', () => {
+            const panel = document.getElementById('keyboard-help-panel');
+            panel.classList.toggle('hidden');
+        });
+
         // Weight help toggle
         document.getElementById('weight-help-btn').addEventListener('click', () => {
             const panel = document.getElementById('weight-help-panel');
@@ -1075,7 +1086,7 @@
             for (const [groupName, components] of Object.entries(groups)) {
                 const groupLabel = t(WEIGHT_GROUP_KEYS[groupName] || groupName);
                 container.insertAdjacentHTML('beforeend', `
-                    <div class="text-xs text-purple-400 uppercase tracking-wide mt-3 mb-1 first:mt-0">${groupLabel}</div>
+                    <div class="text-purple-400 uppercase tracking-wide mt-3 mb-2 first:mt-0">${groupLabel}</div>
                 `);
 
                 for (const {key, metricKey, inverse} of components) {
@@ -1099,20 +1110,20 @@
 
                     const html = `
                         <div class="flex items-center gap-2 slider-row ${isZero && origValue === 0 ? 'opacity-50' : ''}" data-key="${key}">
-                            <span class="w-24 text-neutral-400 text-xs truncate" title="${label}">${label}</span>
-                            <span class="w-12 text-right text-xs font-mono ${classA}" data-metric-a="${metricKey}">${fmtA}</span>
-                            <span class="w-12 text-right text-xs font-mono ${classB}" data-metric-b="${metricKey}">${fmtB}</span>
+                            <span class="w-24 text-neutral-400 truncate" title="${label}">${label}</span>
+                            <span class="w-12 text-right font-mono ${classA}" data-metric-a="${metricKey}">${fmtA}</span>
+                            <span class="w-12 text-right font-mono ${classB}" data-metric-b="${metricKey}">${fmtB}</span>
                             <div class="flex-1 relative">
                                 <input type="range" min="0" max="100" value="${value}"
                                        class="w-full h-2 bg-neutral-700 rounded appearance-none cursor-pointer slider-input"
                                        data-key="${key}" data-orig="${origValue}" oninput="onWeightChange(this)">
                                 <div class="absolute top-0 h-2 w-0.5 bg-yellow-500 pointer-events-none" style="left: ${origMarkerPos}; transform: translateX(-50%);" title="Original: ${origValue}%"></div>
                             </div>
-                            <span class="w-8 text-right text-xs font-mono" id="val-${key}">${value}</span>
-                            <span class="w-6 text-right text-xs font-mono ${deltaClass}" id="delta-${key}">${deltaText}</span>
+                            <span class="w-8 text-right font-mono" id="val-${key}">${value}</span>
+                            <span class="w-6 text-right font-mono ${deltaClass}" id="delta-${key}">${deltaText}</span>
                             <div class="flex gap-0.5">
-                                <button onclick="adjustWeight('${key}', -5)" class="w-5 h-5 text-xs bg-neutral-700 hover:bg-neutral-600 rounded" title="-5%">-</button>
-                                <button onclick="adjustWeight('${key}', 5)" class="w-5 h-5 text-xs bg-neutral-700 hover:bg-neutral-600 rounded" title="+5%">+</button>
+                                <button onclick="adjustWeight('${key}', -5)" class="w-5 h-5 bg-neutral-700 hover:bg-neutral-600 rounded" title="-5%">-</button>
+                                <button onclick="adjustWeight('${key}', 5)" class="w-5 h-5 bg-neutral-700 hover:bg-neutral-600 rounded" title="+5%">+</button>
                             </div>
                         </div>
                     `;

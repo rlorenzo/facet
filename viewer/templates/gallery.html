@@ -222,33 +222,32 @@
                         {% endfor %}
                     </select>
 
-                    <!-- Person Filter + Edit -->
+                    <!-- Person Multi-Select Filter + Edit -->
                     {% if options.persons %}
+                    {% set selected_person_ids = params.person.split(',') if params.person else [] %}
                     <div class="w-full sm:basis-1/2 lg:w-auto flex gap-1">
-                        <div class="person-dropdown relative flex-1 lg:flex-none">
-                            <button type="button" class="person-dropdown-btn w-full lg:w-auto bg-neutral-800 text-white text-sm px-2 py-1.5 rounded border border-neutral-700 hover:border-neutral-600 focus:border-green-500 focus:outline-none flex items-center gap-2">
-                                {% if params.person %}
-                                    {% for id, name, face_id, count in options.persons if id|string == params.person %}
-                                    <img src="/person_thumbnail/{{ id }}" class="w-12 h-12 rounded-full object-cover flex-shrink-0" alt="">
-                                    <span class="truncate max-w-[120px]">{{ name or _('manage_persons.person_fallback', id=id) }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <span class="truncate">{{ _('ui.filters.all_people') }}</span>
-                                {% endif %}
-                                <svg class="w-4 h-4 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                            </button>
-                            <div class="person-dropdown-menu hidden absolute top-full left-0 mt-1 bg-neutral-800 border border-neutral-700 rounded shadow-lg z-50 max-h-64 overflow-y-auto min-w-[200px]">
-                                <a href="?{{ params|urlencode_without('person') }}" class="flex items-center gap-2 px-3 py-2 hover:bg-neutral-700 text-white text-sm">
-                                    <span class="w-12 h-12"></span>
-                                    <span>{{ _('ui.filters.all_people') }}</span>
-                                </a>
-                                {% for id, name, face_id, count in options.persons %}
-                                {% set person_params = params|urlencode_without(['type', 'person']) %}
-                                <a href="?{{ person_params ~ ('&' if person_params else '') }}person={{ id }}" class="flex items-center gap-2 px-3 py-2 hover:bg-neutral-700 text-white text-sm {% if params.person == id|string %}bg-neutral-700{% endif %}">
-                                    <img src="/person_thumbnail/{{ id }}" class="w-12 h-12 rounded-full object-cover" alt="" loading="lazy">
+                        <div class="person-multiselect relative flex-1 lg:flex-none" id="person-ms">
+                            <!-- Trigger area -->
+                            <div class="person-ms-trigger w-full lg:w-auto bg-neutral-800 text-white text-sm px-2 py-1 rounded border border-neutral-700 hover:border-neutral-600 focus-within:border-green-500 flex items-center gap-1 cursor-pointer min-h-[34px]" onclick="personMsOpen(event)">
+                                {% for id, name, face_id, count in options.persons if id|string in selected_person_ids %}
+                                <span class="person-ms-chip flex items-center gap-1 bg-neutral-700 rounded-full pl-0.5 pr-1.5 py-0.5 text-xs max-w-[140px]" data-person-id="{{ id }}">
+                                    <img src="/person_thumbnail/{{ id }}" class="w-5 h-5 rounded-full object-cover flex-shrink-0" alt="">
                                     <span class="truncate">{{ name or _('manage_persons.person_fallback', id=id) }}</span>
-                                    <span class="text-neutral-500 ml-auto">({{ count }})</span>
-                                </a>
+                                    <button type="button" class="ml-0.5 text-neutral-400 hover:text-white" onclick="event.stopPropagation(); personMsRemove('{{ id }}')">&times;</button>
+                                </span>
+                                {% endfor %}
+                                <input type="text" class="person-ms-input bg-transparent border-none outline-none text-sm text-white flex-1 min-w-[60px] w-0" placeholder="{% if not selected_person_ids %}{{ _('ui.filters.all_people') }}{% endif %}" oninput="personMsFilter(this.value)" onclick="event.stopPropagation(); personMsOpen(event)" autocomplete="off">
+                                <svg class="w-4 h-4 ml-auto flex-shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                            <!-- Dropdown panel -->
+                            <div class="person-ms-dropdown hidden absolute top-full left-0 mt-1 bg-neutral-800 border border-neutral-700 rounded shadow-lg z-50 max-h-64 overflow-y-auto min-w-[240px] w-full" id="person-ms-dropdown">
+                                {% for id, name, face_id, count in options.persons %}
+                                <label class="person-ms-item flex items-center gap-2 px-3 py-2 hover:bg-neutral-700 text-white text-sm cursor-pointer" data-person-id="{{ id }}" data-person-name="{{ (name or _('manage_persons.person_fallback', id=id))|lower }}">
+                                    <input type="checkbox" class="accent-green-500" {% if id|string in selected_person_ids %}checked{% endif %} onchange="personMsToggle('{{ id }}')">
+                                    <img src="/person_thumbnail/{{ id }}" class="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" loading="lazy">
+                                    <span class="truncate">{{ name or _('manage_persons.person_fallback', id=id) }}</span>
+                                    <span class="text-neutral-500 ml-auto text-xs">({{ count }})</span>
+                                </label>
                                 {% endfor %}
                                 {% if edition_authenticated %}
                                 <a href="/manage_persons" class="flex items-center gap-2 px-3 py-2 hover:bg-neutral-700 text-green-500 text-sm border-t border-neutral-700">
@@ -261,7 +260,7 @@
                                 {% endif %}
                             </div>
                         </div>
-                        {% if params.person and edition_authenticated %}
+                        {% if params.person and ',' not in params.person and edition_authenticated %}
                         {% for id, name, face_id, count in options.persons if id|string == params.person %}
                         <button type="button" onclick="renamePerson({{ id }}, '{{ (name or _('manage_persons.person_fallback', id=id))|e }}')" class="flex-shrink-0 bg-neutral-800 text-neutral-400 hover:text-white p-1.5 rounded border border-neutral-700 hover:border-neutral-600" title="{{ _('manage_persons.rename_person') }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -373,6 +372,13 @@
                 </a>
                 {% endif %}
 
+                <!-- Share Link Button -->
+                <button onclick="shareLink()" class="flex-shrink-0 relative bg-neutral-800 text-white px-3 py-1.5 rounded border border-neutral-700 hover:border-green-500 flex items-center gap-2 text-sm" title="{{ _('ui.buttons.share') }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                    </svg>
+                </button>
+
                 <!-- Stats Button -->
                 <a href="/stats" class="flex-shrink-0 relative bg-neutral-800 text-white px-3 py-1.5 rounded border border-neutral-700 hover:border-green-500 flex items-center gap-2 text-sm" title="{{ _('stats.title') }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,6 +393,13 @@
     {% if active_filter_count > 0 %}
     <div class="px-3 sm:px-6 py-2 flex flex-wrap gap-2 bg-neutral-900/50 border-b border-neutral-800">
         {% for key, val in active_filters.items() %}
+        {% if key.startswith('person:') %}
+        {% set pid = key.split(':')[1] %}
+        <a href="?{{ params|urlencode_remove_person(pid) }}" class="filter-chip">
+            {{ filter_labels.get('person', 'Person') }}: {{ val }}
+            <span class="filter-chip-remove">&times;</span>
+        </a>
+        {% else %}
         <a href="?{% for k, v in params.items() if k != key and v and k not in excluded_url_params %}{{ k }}={{ v }}&{% endfor %}" class="filter-chip">
             {% if key == 'hide_blinks' %}
             {{ _('ui.toggles.hide_blinks') }}
@@ -403,6 +416,7 @@
             {% endif %}
             <span class="filter-chip-remove">&times;</span>
         </a>
+        {% endif %}
         {% endfor %}
         <a href="/" class="text-red-400 text-xs hover:text-red-300 ml-2 self-center">{{ _('ui.buttons.clear_all') }}</a>
     </div>
@@ -908,10 +922,11 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% if p['persons'] or (edition_authenticated and params.person) %}
+                    {% set person_filter_ids = params.person.split(',') if params.person else [] %}
+                    {% if p['persons'] or (edition_authenticated and person_filter_ids|length == 1) %}
                     <div class="flex flex-wrap gap-1 mt-1 items-center">
                         {% if p['persons'] %}
-                        {% for person in p['persons'] if person.id|string != params.person %}
+                        {% for person in p['persons'] if person.id|string not in person_filter_ids %}
                         <a href="?{{ params|urlencode_with('person', person.id) }}" title="{{ person.name }}" class="block">
                             <img src="/person_thumbnail/{{ person.id }}"
                                  alt="{{ person.name }}"
@@ -920,8 +935,8 @@
                         </a>
                         {% endfor %}
                         {% endif %}
-                        {% if edition_authenticated and params.person %}
-                        <button onclick="event.stopPropagation(); removePersonFromPhoto('{{ p['path'] | js_escape }}', {{ params.person }})"
+                        {% if edition_authenticated and person_filter_ids|length == 1 %}
+                        <button onclick="event.stopPropagation(); removePersonFromPhoto('{{ p['path'] | js_escape }}', {{ person_filter_ids[0] }})"
                                 class="remove-person-btn w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-white"
                                 title="{{ _('manage_persons.remove_person_title') }}">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1099,7 +1114,7 @@
         const I18N = {{ js_translations(['manage_persons', 'notifications', 'ui', 'similar', 'rating', 'edition', 'tooltip']) | tojson | safe }};
         const FEATURES = {{ viewer_config.features | tojson | safe }};
         const EDITION_AUTHENTICATED = {{ edition_authenticated | tojson }};
-        const currentPersonFilter = {{ params.person|tojson if params.person else 'null' }};
+        const currentPersonFilters = new Set({{ (params.person.split(',') if params.person else [])|tojson }});
         function t(key, vars={}) {
             const keys = key.split('.');
             let value = I18N;
@@ -1207,16 +1222,59 @@
             .catch(() => window.location.reload());
         }
 
-        // Person dropdown toggle
-        document.querySelectorAll('.person-dropdown').forEach(dropdown => {
-            const btn = dropdown.querySelector('.person-dropdown-btn');
-            const menu = dropdown.querySelector('.person-dropdown-menu');
+        // Person multi-select widget
+        const personMsSelection = new Set(currentPersonFilters);
 
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                menu.classList.toggle('hidden');
+        function personMsOpen(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('person-ms-dropdown');
+            dropdown.classList.remove('hidden');
+            const input = document.querySelector('.person-ms-input');
+            if (input) input.focus();
+        }
+
+        function personMsClose() {
+            const dropdown = document.getElementById('person-ms-dropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+            const input = document.querySelector('.person-ms-input');
+            if (input) { input.value = ''; personMsFilter(''); }
+        }
+
+        function personMsFilter(query) {
+            const q = query.toLowerCase();
+            document.querySelectorAll('.person-ms-item').forEach(item => {
+                const name = item.dataset.personName || '';
+                item.style.display = name.includes(q) ? '' : 'none';
             });
-        });
+        }
+
+        function personMsToggle(personId) {
+            const id = String(personId);
+            if (personMsSelection.has(id)) {
+                personMsSelection.delete(id);
+            } else {
+                personMsSelection.add(id);
+            }
+            personMsApply();
+        }
+
+        function personMsRemove(personId) {
+            personMsSelection.delete(String(personId));
+            personMsApply();
+        }
+
+        function personMsApply() {
+            const url = new URLSearchParams(window.location.search);
+            url.delete('page');
+            if (personMsSelection.size > 0) {
+                url.set('person', Array.from(personMsSelection).join(','));
+                // Clear type filter when filtering by person
+                url.delete('type');
+            } else {
+                url.delete('person');
+            }
+            window.location.search = url.toString();
+        }
 
         // Rename person function
         function renamePerson(personId, currentName) {
@@ -1242,21 +1300,27 @@
             }
         }
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.person-dropdown-menu').forEach(menu => {
-                menu.classList.add('hidden');
-            });
+        // Close person multi-select when clicking outside
+        document.addEventListener('click', (e) => {
+            const ms = document.getElementById('person-ms');
+            if (ms && !ms.contains(e.target)) {
+                personMsClose();
+            }
         });
 
-        // Close drawer on Escape key, clear selection on Escape
+        // Close drawer/dropdown on Escape key, clear selection on Escape
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                const drawer = document.getElementById('filter-drawer');
-                if (!drawer.classList.contains('-translate-x-full')) {
-                    toggleDrawer();
-                } else if (selectedPhotos.size > 0) {
-                    clearSelection();
+                const dropdown = document.getElementById('person-ms-dropdown');
+                if (dropdown && !dropdown.classList.contains('hidden')) {
+                    personMsClose();
+                } else {
+                    const drawer = document.getElementById('filter-drawer');
+                    if (!drawer.classList.contains('-translate-x-full')) {
+                        toggleDrawer();
+                    } else if (selectedPhotos.size > 0) {
+                        clearSelection();
+                    }
                 }
             }
         });
@@ -1359,6 +1423,14 @@
             updateToolbar();
         }
 
+        function shareLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                showToast(t('notifications.link_copied'));
+            }).catch(() => {
+                showToast(t('notifications.copy_failed'), true);
+            });
+        }
+
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             const container = document.getElementById('toast-container');
@@ -1459,12 +1531,13 @@
                 const escapedFilename = p.filename.replace(/\\/g, '\\\\').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 const escapedPath = p.path.replace(/\\/g, '\\\\').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-                // Build person avatars (hide only on person_viewer page, exclude current person filter)
+                // Build person avatars (hide only on person_viewer page, exclude current person filters)
                 const isPersonViewer = window.location.pathname.startsWith('/person/');
-                const currentPersonFilter = new URLSearchParams(window.location.search).get('person');
-                const filteredPersons = (p.persons || []).filter(person => String(person.id) !== currentPersonFilter);
-                const removePersonBtn = EDITION_AUTHENTICATED && currentPersonFilter ? `
-                    <button onclick="event.stopPropagation(); removePersonFromPhoto('${escapedPath}', ${currentPersonFilter})"
+                const personParam = new URLSearchParams(window.location.search).get('person') || '';
+                const currentPersonIds = new Set(personParam.split(',').filter(Boolean));
+                const filteredPersons = (p.persons || []).filter(person => !currentPersonIds.has(String(person.id)));
+                const removePersonBtn = EDITION_AUTHENTICATED && currentPersonIds.size === 1 ? `
+                    <button onclick="event.stopPropagation(); removePersonFromPhoto('${escapedPath}', ${Array.from(currentPersonIds)[0]})"
                             class="remove-person-btn w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-white"
                             title="Remove person from this photo">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1575,7 +1648,7 @@
                         <div class="rating-badge absolute top-8 right-1 bg-black/70 rounded px-1 py-0.5 text-xs font-medium z-10" data-path="${escapedPath}">
                             ${p.is_favorite ? '<span class="text-red-400">❤</span>' : `<span class="text-yellow-400">★${p.star_rating}</span>`}
                         </div>` : ''}
-                        ${EDITION_AUTHENTICATED && (p.face_count || 0) > 0 && !currentPersonFilter ? `
+                        ${EDITION_AUTHENTICATED && (p.face_count || 0) > 0 && currentPersonIds.size === 0 ? `
                         <button onclick="event.stopPropagation(); showAssignFaceModal('${escapedPath}')"
                                 class="assign-face-btn opacity-0 group-hover:opacity-100 absolute top-1 left-1 w-6 h-6 bg-blue-600 hover:bg-blue-500 rounded-full flex items-center justify-center text-white transition-opacity z-10"
                                 title="{{ _('manage_persons.assign_face') }}">
