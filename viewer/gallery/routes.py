@@ -801,11 +801,15 @@ def api_similar_photos(photo_path):
 
     conn = get_db_connection()
     try:
-        # Get source photo data
-        source = conn.execute("""
+        # Multi-user visibility filter
+        user_id = get_session_user_id()
+        vis_sql, vis_params = get_visibility_clause(user_id)
+
+        # Get source photo data (with visibility check)
+        source = conn.execute(f"""
             SELECT path, clip_embedding, date_taken, aggregate, aesthetic, comp_score
-            FROM photos WHERE path = ?
-        """, (photo_path,)).fetchone()
+            FROM photos WHERE path = ? AND {vis_sql}
+        """, [photo_path] + vis_params).fetchone()
 
         if not source:
             return jsonify({'error': 'Photo not found'}), 404
@@ -823,12 +827,12 @@ def api_similar_photos(photo_path):
         for row in person_rows:
             source_persons.add(row[0])
 
-        # Get all other photos with embeddings
-        candidates = conn.execute("""
+        # Get all other photos with embeddings (scoped to user's visible photos)
+        candidates = conn.execute(f"""
             SELECT path, filename, clip_embedding, date_taken, aggregate, aesthetic, comp_score, thumbnail
             FROM photos
-            WHERE path != ? AND clip_embedding IS NOT NULL
-        """, (photo_path,)).fetchall()
+            WHERE path != ? AND clip_embedding IS NOT NULL AND {vis_sql}
+        """, [photo_path] + vis_params).fetchall()
 
         results = []
         for cand in candidates:

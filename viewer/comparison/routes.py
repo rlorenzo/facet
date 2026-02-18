@@ -7,7 +7,7 @@ from db import DEFAULT_DB_PATH
 from viewer.comparison import comparison_bp
 from viewer.config import VIEWER_CONFIG, _FULL_CONFIG, _CONFIG_PATH, get_comparison_mode_settings, map_disk_path
 from viewer.auth import is_edition_authenticated, require_edition, get_session_user_id
-from viewer.db_helpers import get_db_connection
+from viewer.db_helpers import get_db_connection, get_visibility_clause
 from viewer.types import TYPE_TO_CATEGORY
 
 # Mapping from optimizer DB column names to config weight names (used by learned_weights and confidence)
@@ -106,11 +106,14 @@ def api_download_single():
     if not photo_path:
         return jsonify({'error': 'path required'}), 400
 
-    # Validate path exists in the database (prevents path traversal)
+    # Validate path exists in the database and user has visibility
     conn = get_db_connection()
     try:
+        user_id = get_session_user_id()
+        vis_sql, vis_params = get_visibility_clause(user_id)
         row = conn.execute(
-            "SELECT path FROM photos WHERE path = ?", (photo_path,)
+            f"SELECT path FROM photos WHERE path = ? AND {vis_sql}",
+            [photo_path] + vis_params
         ).fetchone()
     finally:
         conn.close()
@@ -167,12 +170,15 @@ def api_download_selected():
     if not paths:
         return jsonify({'error': 'No paths provided'}), 400
 
-    # Validate all paths exist in the database
+    # Validate all paths exist in the database and user has visibility
     conn = get_db_connection()
     try:
+        user_id = get_session_user_id()
+        vis_sql, vis_params = get_visibility_clause(user_id)
         placeholders = ','.join('?' for _ in paths)
         rows = conn.execute(
-            f"SELECT path FROM photos WHERE path IN ({placeholders})", paths
+            f"SELECT path FROM photos WHERE path IN ({placeholders}) AND {vis_sql}",
+            paths + vis_params
         ).fetchall()
         valid_paths = {row[0] for row in rows}
     finally:
