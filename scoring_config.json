@@ -1,4 +1,7 @@
 {
+  "scanning": {
+    "skip_hidden_directories": true
+  },
   "categories": [
     {
       "name": "art",
