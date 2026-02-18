@@ -858,7 +858,7 @@ class SAMPNetScorer:
         except Exception as e:
             print(f"Failed to download SAMP-Net weights: {e}")
             print("Please download manually from Dropbox:")
-            print("  https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=0")
+            print("  https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1")
             print(f"  Place at: {self.model_path}")
             raise
 

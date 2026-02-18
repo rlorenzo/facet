@@ -106,7 +106,9 @@ def get_gpu_allocated_bytes() -> int:
         import torch
         if torch.cuda.is_available():
             return torch.cuda.memory_allocated()
-    except (ImportError, RuntimeError):
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return torch.mps.current_allocated_memory()
+    except (ImportError, RuntimeError, AttributeError):
         pass
     return 0
 
@@ -121,7 +123,9 @@ def get_gpu_reserved_bytes() -> int:
         import torch
         if torch.cuda.is_available():
             return torch.cuda.memory_reserved()
-    except (ImportError, RuntimeError):
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return torch.mps.driver_allocated_memory()
+    except (ImportError, RuntimeError, AttributeError):
         pass
     return 0
 

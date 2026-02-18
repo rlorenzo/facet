@@ -153,6 +153,7 @@ def api_download_single():
         pil_img = Image.fromarray(rgb)
         buffer = BytesIO()
         pil_img.save(buffer, format='JPEG', quality=95)
+        pil_img.close()
         buffer.seek(0)
 
         download_name = os.path.splitext(os.path.basename(photo_path))[0] + '.jpg'
@@ -168,8 +169,7 @@ def api_download_single():
     if disk_path.lower().endswith(('.heic', '.heif')):
         if not _heif_available:
             return jsonify(
-                {'error': 'HEIC/HEIF conversion is not available on this server '
-                          '(missing pillow-heif dependency)'}
+                {'error': 'HEIC/HEIF images cannot be downloaded from this server'}
             ), 500
 
         from io import BytesIO
@@ -179,6 +179,7 @@ def api_download_single():
             pil_img = pil_img.convert('RGB')
         buffer = BytesIO()
         pil_img.save(buffer, format='JPEG', quality=95)
+        pil_img.close()
         buffer.seek(0)
 
         download_name = os.path.splitext(os.path.basename(photo_path))[0] + '.jpg'
