@@ -155,6 +155,32 @@ def api_download_single():
             download_name=download_name
         )
 
+    # Convert HEIC/HEIF files to JPEG for download
+    if disk_path.lower().endswith(('.heic', '.heif')):
+        from io import BytesIO
+        from PIL import Image
+        try:
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+        except ImportError:
+            pass
+
+        pil_img = Image.open(disk_path)
+        if pil_img.mode != 'RGB':
+            pil_img = pil_img.convert('RGB')
+        buffer = BytesIO()
+        pil_img.save(buffer, format='JPEG', quality=95)
+        buffer.seek(0)
+
+        download_name = os.path.splitext(os.path.basename(photo_path))[0] + '.jpg'
+
+        return send_file(
+            buffer,
+            mimetype='image/jpeg',
+            as_attachment=True,
+            download_name=download_name
+        )
+
     return send_file(
         disk_path,
         as_attachment=True,

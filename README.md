@@ -3,7 +3,7 @@
 A multi-dimensional photo analysis engine that examines every facet of an image — from aesthetic appeal and composition to facial detail and technical precision — using an ensemble of vision models to surface the photos that truly shine.
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Docker-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS%20%7C%20Docker-lightgrey)
 
 <p align="center">
   <img src="docs/screenshots/gallery-desktop.jpg" alt="Facet Gallery" width="100%">
@@ -100,6 +100,30 @@ VRAM is auto-detected at startup. Use `--single-pass` to keep all models loaded 
 
 TOPIQ (0.93 SRCC on KonIQ-10k) is the primary quality model for 16gb/24gb profiles. Lower profiles use CLIP+MLP (0.76 SRCC) with an upgrade path as hardware allows.
 
+### macOS / Apple Silicon
+
+Facet runs natively on Apple Silicon Macs using MPS (Metal Performance Shaders) for GPU acceleration. VRAM auto-detection uses unified memory and caps at the `16gb` profile to avoid loading models that require more memory than MPS can reliably handle.
+
+| Mac                | Unified RAM | Profile | Notes                            |
+| ------------------ | ----------- | ------- | -------------------------------- |
+| M1/M2 (8 GB)      | 8 GB        | `8gb`   | Good for scoring + VLM tagging   |
+| M1/M2/M3 (16 GB+) | 16 GB+      | `16gb`  | Full TOPIQ + SAMP-Net + Qwen3-VL |
+| M1 Pro/Max/Ultra   | 32-192 GB   | `16gb`  | Capped at 16gb (MPS stability)   |
+
+**Apple Photos Library:** To scan photos directly from your Photos Library, grant **Full Disk Access** to your terminal app in System Settings → Privacy & Security. Then point Facet at the originals or renders directory:
+
+```bash
+python photos.py "/Users/you/Pictures/Photos Library.photoslibrary/originals"
+```
+
+> **iCloud Photos:** If you use "Optimize Mac Storage", originals are not stored locally — only low-resolution placeholders are on disk. Open Photos, select the photos you want to analyze, and choose **File → Export → Export Unmodified Originals** (or **Export Photos** for edited versions) to a local folder, then scan that folder instead.
+
+**Port 5000 conflict:** macOS Monterey+ uses port 5000 for AirPlay Receiver. Use a different port for the viewer:
+
+```bash
+PORT=5001 python viewer.py
+```
+
 ## Documentation
 
 | Document | Description |
@@ -115,6 +139,7 @@ TOPIQ (0.93 SRCC on KonIQ-10k) is the primary quality model for 16gb/24gb profil
 ## Supported File Types
 
 - **JPEG** (.jpg, .jpeg)
+- **HEIC/HEIF** (.heic, .heif) — Apple Photos, iPhones (requires `pillow-heif`)
 - **Canon RAW** (.cr2, .cr3) — skipped if matching JPEG exists
 
 ## Troubleshooting

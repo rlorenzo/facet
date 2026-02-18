@@ -112,7 +112,8 @@ def main():
     import open_clip
 
     model, _, _ = open_clip.create_model_and_transforms('ViT-L-14', pretrained='laion2b_s32b_b82k')
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    from utils.device import get_best_device
+    device = get_best_device()
     model = model.to(device).eval()
 
     tagger = CLIPTagger(model, device, config=config)

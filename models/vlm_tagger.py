@@ -66,7 +66,8 @@ class VLMTagger:
         self.scoring_config = scoring_config
         self.model = None
         self.processor = None
-        self.device = 'cuda'
+        from utils.device import get_best_device
+        self.device = get_best_device()
 
         # Detect model family from path
         model_path = model_config.get('model_path', '')
@@ -167,12 +168,16 @@ Tags:"""
             from transformers import Qwen2_5_VLForConditionalGeneration
             model_cls = Qwen2_5_VLForConditionalGeneration
 
+        from utils.device import get_device_map_or_device
+        device_map, device_for_to = get_device_map_or_device(self.device)
+        load_kwargs = dict(dtype=torch_dtype, trust_remote_code=True)
+        if device_map:
+            load_kwargs['device_map'] = device_map
         self.model = model_cls.from_pretrained(
-            model_path,
-            dtype=torch_dtype,
-            device_map="auto",
-            trust_remote_code=True,
+            model_path, **load_kwargs
         )
+        if device_for_to:
+            self.model = self.model.to(device_for_to)
 
         # Qwen3 supports max_pixels to control VRAM during inference
         processor_kwargs = {'trust_remote_code': True}
@@ -194,8 +199,8 @@ Tags:"""
             del self.processor
             self.processor = None
 
-        _ensure_imports()
-        torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
         family_label = 'Qwen3-VL' if self.family == 'qwen3' else 'Qwen2.5-VL'
         print(f"{family_label} tagger unloaded")
 

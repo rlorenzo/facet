@@ -44,8 +44,8 @@ class ModelManager:
             config: ScoringConfig instance with model settings
         """
         self.config = config
-        _torch = _ensure_torch()
-        self.device = 'cuda' if _torch.cuda.is_available() else 'cpu'
+        from utils.device import get_best_device
+        self.device = get_best_device()
         self.models = {}
         self.profile = None
 
@@ -108,11 +108,16 @@ class ModelManager:
             dtype_str = qwen_config.get('torch_dtype', 'bfloat16')
             torch_dtype = getattr(_torch, dtype_str, _torch.bfloat16)
 
+            from utils.device import get_device_map_or_device
+            device_map, device_for_to = get_device_map_or_device(self.device)
+            load_kwargs = dict(dtype=torch_dtype)
+            if device_map:
+                load_kwargs['device_map'] = device_map
             model = Qwen2VLForConditionalGeneration.from_pretrained(
-                model_path,
-                dtype=torch_dtype,
-                device_map="auto"
+                model_path, **load_kwargs
             )
+            if device_for_to:
+                model = model.to(device_for_to)
 
             processor = AutoProcessor.from_pretrained(model_path)
 
@@ -264,8 +269,8 @@ class ModelManager:
                         v.cpu()
             del model
 
-        _torch = _ensure_torch()
-        _torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
 
     def _can_cache_to_ram(self, model_name: str) -> bool:
         """Check if a model can be cached to CPU RAM between passes.
@@ -371,7 +376,8 @@ class ModelManager:
             del model
             import gc
             gc.collect()
-            _ensure_torch().cuda.empty_cache()
+            from utils.device import safe_empty_cache
+            safe_empty_cache()
             return None
 
     def evict_cpu_cache(self):
@@ -468,8 +474,9 @@ class ModelManager:
         try:
             from insightface.app import FaceAnalysis
 
-            app = FaceAnalysis(providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
-            app.prepare(ctx_id=0 if self.device == 'cuda' else -1, det_size=(640, 640))
+            from utils.device import get_onnx_providers, get_insightface_ctx_id
+            app = FaceAnalysis(providers=get_onnx_providers())
+            app.prepare(ctx_id=get_insightface_ctx_id(), det_size=(640, 640))
 
             self.models['insightface'] = app
             print("InsightFace loaded")
@@ -584,18 +591,18 @@ class ModelManager:
 
         import gc
         gc.collect()
-        _torch = _ensure_torch()
-        _torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
         print("All models unloaded")
 
     def get_vram_usage(self) -> str:
         """Get current VRAM usage estimate."""
-        _torch = _ensure_torch()
-        if not _torch.cuda.is_available():
+        from utils.device import get_gpu_allocated_bytes, get_gpu_reserved_bytes, has_gpu
+        if not has_gpu():
             return "N/A (CPU mode)"
 
-        allocated = _torch.cuda.memory_allocated() / 1024**3
-        reserved = _torch.cuda.memory_reserved() / 1024**3
+        allocated = get_gpu_allocated_bytes() / 1024**3
+        reserved = get_gpu_reserved_bytes() / 1024**3
         return f"Allocated: {allocated:.2f}GB, Reserved: {reserved:.2f}GB"
 
     @staticmethod
@@ -604,15 +611,11 @@ class ModelManager:
         Detect available GPU VRAM in GB.
 
         Returns:
-            Available VRAM in GB, or 0 if no GPU available
+            Available VRAM in GB, or 0 if no GPU available.
+            On Apple Silicon (MPS), returns system unified memory.
         """
-        _torch = _ensure_torch()
-        if not _torch.cuda.is_available():
-            return 0.0
-
-        props = _torch.cuda.get_device_properties(0)
-        total_gb = props.total_memory / (1024**3)
-        return total_gb
+        from utils.device import get_gpu_memory_gb
+        return get_gpu_memory_gb()
 
     @staticmethod
     def detect_system_ram_gb() -> float:
@@ -638,6 +641,19 @@ class ModelManager:
         Returns:
             Profile name: 'legacy', '8gb', '16gb', or '24gb'
         """
+        from utils.device import is_mps
+        if is_mps():
+            # Apple Silicon uses unified memory shared between CPU and GPU.
+            # Reporting full system RAM overstates what's actually available
+            # for GPU models, so cap at 16gb profile to avoid loading models
+            # that are too heavy (e.g. Qwen2.5-VL-7B at ~18GB).
+            if vram_gb >= 14:
+                return "16gb"
+            elif vram_gb >= 6:
+                return "8gb"
+            else:
+                return "legacy"
+
         if vram_gb >= 20:
             return "24gb"
         elif vram_gb >= 14:

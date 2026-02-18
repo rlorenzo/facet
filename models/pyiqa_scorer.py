@@ -91,7 +91,11 @@ class PyIQAScorer:
 
         self.model_name = model_name
         self.model_info = PYIQA_MODELS[model_name]
-        self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+        if device:
+            self.device = device
+        else:
+            from utils.device import get_best_device
+            self.device = get_best_device()
         self.model = None
         self._loaded = False
 
@@ -125,7 +129,8 @@ class PyIQAScorer:
             self.model = None
 
         self._loaded = False
-        torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
         print(f"  {self.model_name} unloaded")
 
     # Max long edge for inference (prevents OOM on CPU with high-res images).

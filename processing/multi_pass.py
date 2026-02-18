@@ -342,12 +342,14 @@ class ChunkedMultiPassProcessor:
                 try:
                     model = self.model_manager.load_model_only(model_name)
                     if model is None:
-                        raise RuntimeError(
-                            f"Required model '{model_name}' failed to load. "
-                            f"Cannot continue processing."
-                        )
+                        print(f"\nModel '{model_name}' failed to load, trying fallback...")
+                        self._handle_oom(model_name)
+                        continue
                     loaded_models[model_name] = model
-                except torch.cuda.OutOfMemoryError:
+                except (RuntimeError, Exception) as e:
+                    from utils.device import is_oom_error
+                    if not is_oom_error(e):
+                        raise
                     print(f"\nOOM loading {model_name}, trying fallback...")
                     self._handle_oom(model_name)
 
@@ -358,7 +360,10 @@ class ChunkedMultiPassProcessor:
             for model_name, model in loaded_models.items():
                 try:
                     self._run_model_pass(model_name, model, images, results)
-                except torch.cuda.OutOfMemoryError:
+                except (RuntimeError, Exception) as e:
+                    from utils.device import is_oom_error
+                    if not is_oom_error(e):
+                        raise
                     print(f"\nOOM during {model_name} inference, skipping...")
 
             self.metrics['inference_time'] += time.time() - infer_start
@@ -381,8 +386,8 @@ class ChunkedMultiPassProcessor:
         # Free memory
         del images
         gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
 
     def _load_images(self, paths: List[str]) -> Dict[str, Dict]:
         """

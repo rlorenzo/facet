@@ -206,17 +206,12 @@ class ResourceMonitor:
         except Exception:
             metrics['process_memory_gb'] = 0.0
 
-        # GPU memory (if CUDA available)
-        if torch.cuda.is_available():
-            metrics['gpu_memory_allocated_gb'] = torch.cuda.memory_allocated() / (1024**3)
-            try:
-                total = torch.cuda.get_device_properties(0).total_memory
-                metrics['gpu_memory_total_gb'] = total / (1024**3)
-            except Exception:
-                metrics['gpu_memory_total_gb'] = 0.0
-        else:
-            metrics['gpu_memory_allocated_gb'] = 0.0
-            metrics['gpu_memory_total_gb'] = 0.0
+        # GPU memory (CUDA or MPS)
+        from utils.device import get_gpu_allocated_bytes, get_gpu_memory_bytes
+        gpu_alloc = get_gpu_allocated_bytes()
+        gpu_total = get_gpu_memory_bytes()
+        metrics['gpu_memory_allocated_gb'] = gpu_alloc / (1024**3) if gpu_alloc else 0.0
+        metrics['gpu_memory_total_gb'] = gpu_total / (1024**3) if gpu_total else 0.0
 
         # I/O rate calculation
         try:

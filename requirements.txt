@@ -7,11 +7,10 @@ torch>=2.0.0
 torchvision>=0.15.0
 open-clip-torch>=2.20.0
 
-# Advanced VLM Models - only needed for 8gb/16gb VRAM profiles in scoring_config.json
+# Advanced VLM Models - needed for 8gb/16gb/24gb VRAM profiles
 # The "legacy" profile uses CLIP+MLP and doesn't require these packages
-# Uncomment if using "vram_profile": "8gb" or "16gb":
-# transformers>=4.57.0              # Required for Qwen3-VL tagger
-# accelerate>=0.25.0
+transformers>=4.57.0               # Required for Qwen3-VL tagger (8gb/16gb profiles)
+accelerate>=0.25.0
 # sentencepiece                     # Required for Q-Align tokenizer
 # qwen-vl-utils>=0.0.2              # Only needed for Qwen2-VL (24gb profile)
 
@@ -22,6 +21,7 @@ open-clip-torch>=2.20.0
 # Image Processing
 opencv-python>=4.8.0
 pillow>=10.0.0
+pillow-heif>=0.16.0    # HEIC/HEIF support (Apple Photos, iPhones)
 imagehash>=4.3.0
 rawpy>=0.18.0
 

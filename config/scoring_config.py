@@ -582,7 +582,7 @@ class ScoringConfig:
         models_config = self.get_model_config()
         return models_config.get('samp_net', {
             'model_path': 'pretrained_models/samp_net.pth',
-            'download_url': 'https://github.com/bcmi/Image-Composition-Assessment-with-SAMP/releases/download/v1.0/samp_net.pth',
+            'download_url': 'https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1',
             'input_size': 384,
             'patterns': ['none', 'center', 'rule_of_thirds', 'golden_ratio', 'triangle',
                         'horizontal', 'vertical', 'diagonal', 'symmetric',
@@ -615,16 +615,15 @@ class ScoringConfig:
         """Detect available GPU VRAM in gigabytes.
 
         Returns:
-            Float representing VRAM in GB, or None if no GPU detected
+            Float representing VRAM in GB, or None if no GPU detected.
+            On Apple Silicon (MPS), returns system unified memory.
         """
         try:
-            import torch
-            if not torch.cuda.is_available():
+            from utils.device import get_gpu_memory_gb, has_gpu
+            if not has_gpu():
                 return None
-            # Get VRAM of the first GPU (index 0)
-            vram_bytes = torch.cuda.get_device_properties(0).total_memory
-            vram_gb = vram_bytes / (1024 ** 3)
-            return round(vram_gb, 1)
+            vram_gb = get_gpu_memory_gb()
+            return round(vram_gb, 1) if vram_gb > 0 else None
         except Exception:
             return None
 
@@ -653,19 +652,19 @@ class ScoringConfig:
                 msg = "No GPU detected, using legacy (CPU-only) profile"
             return 'legacy', None, msg
 
-        # Profile recommendations based on VRAM
-        if vram_gb >= 20:
-            profile = '24gb'
-            msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: 24gb (TOPIQ + Qwen2-VL)"
-        elif vram_gb >= 14:
-            profile = '16gb'
-            msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: 16gb (TOPIQ + SAMP-Net)"
-        elif vram_gb >= 6:
-            profile = '8gb'
-            msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: 8gb (TOPIQ + SAMP-Net)"
-        else:
-            profile = 'legacy'
-            msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: legacy (TOPIQ + SAMP-Net)"
+        # Delegate to ModelManager for consistent profile selection
+        # (includes MPS cap for Apple Silicon unified memory)
+        from models.model_manager import ModelManager
+        profile = ModelManager.get_recommended_profile(vram_gb)
+
+        profile_descriptions = {
+            '24gb': 'TOPIQ + Qwen2-VL',
+            '16gb': 'TOPIQ + SAMP-Net',
+            '8gb': 'TOPIQ + SAMP-Net',
+            'legacy': 'TOPIQ + SAMP-Net',
+        }
+        desc = profile_descriptions.get(profile, profile)
+        msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: {profile} ({desc})"
 
         return profile, vram_gb, msg
 

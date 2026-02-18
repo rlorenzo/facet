@@ -791,7 +791,7 @@ Configuration:
         exit(1)
 
     # 1. Gather files recursively from subfolders (or single files)
-    valid_suffixes = {'.jpg', '.jpeg', '.cr2', '.cr3'}
+    valid_suffixes = {'.jpg', '.jpeg', '.cr2', '.cr3', '.heic', '.heif'}
     all_files = []
 
     # Get scanning settings

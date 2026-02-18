@@ -68,7 +68,8 @@ class RAMTagger:
         self.scoring_config = scoring_config
         self.model = None
         self.transform = None
-        self.device = 'cuda'
+        from utils.device import get_best_device
+        self.device = get_best_device()
 
         # Build tag mapping from config vocabulary to RAM++ tags
         self.tag_mapping = {}
@@ -109,7 +110,8 @@ class RAMTagger:
             )
 
         # Clear GPU cache before loading large model
-        torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
 
         # Initialize model
         self.model = ram_plus(
@@ -123,7 +125,7 @@ class RAMTagger:
         self.transform = get_transform(image_size=384)
 
         # Clear any fragmented memory after loading
-        torch.cuda.empty_cache()
+        safe_empty_cache()
 
         print("RAM++ loaded successfully")
 
@@ -135,8 +137,8 @@ class RAMTagger:
             self.model = None
         self.transform = None
 
-        _ensure_imports()
-        torch.cuda.empty_cache()
+        from utils.device import safe_empty_cache
+        safe_empty_cache()
         print("RAM++ tagger unloaded")
 
     def tag_image(self, image: PIL.Image.Image, max_tags: int = 5, threshold: float = 0.5) -> List[str]:
@@ -229,9 +231,10 @@ class RAMTagger:
 
                 try:
                     tags, _ = inference_ram(image_tensor, self.model)
-                except torch.cuda.OutOfMemoryError:
-                    # Clear cache and retry
-                    torch.cuda.empty_cache()
+                except (torch.cuda.OutOfMemoryError, RuntimeError):
+                    # Clear cache and retry (RuntimeError covers MPS OOM)
+                    from utils.device import safe_empty_cache
+                    safe_empty_cache()
                     image_tensor = self.transform(image).unsqueeze(0).to(self.device)
                     tags, _ = inference_ram(image_tensor, self.model)
 

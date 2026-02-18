@@ -28,14 +28,15 @@ class FaceAnalyzer:
         self.min_faces_for_group = min_faces_for_group
         try:
             from insightface.app import FaceAnalysis
+            from utils.device import get_onnx_providers, get_insightface_ctx_id
             # IMPORTANT: We include 'recognition' for face embeddings used in clustering
             self.face_app = FaceAnalysis(
                 name='buffalo_l',
                 root='~/.insightface',
                 allowed_modules=['detection', 'landmark_2d_106', 'recognition'],
-                providers=['CUDAExecutionProvider', 'CPUExecutionProvider']
+                providers=get_onnx_providers()
             )
-            self.face_app.prepare(ctx_id=0, det_size=(640, 640))
+            self.face_app.prepare(ctx_id=get_insightface_ctx_id(), det_size=(640, 640))
             self.available = True
         except Exception as e:
             print(f"InsightFace not available: {e}")

@@ -35,7 +35,7 @@ COMPOSITION_PATTERNS = [
 # Note: U2-Net-P weights must be downloaded from Google Drive
 U2NETP_GDRIVE_ID = "1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy"
 U2NETP_GDRIVE_URL = f"https://drive.google.com/uc?export=download&id={U2NETP_GDRIVE_ID}"
-SAMPNET_WEIGHTS_URL = "https://github.com/bcmi/Image-Composition-Assessment-with-SAMP/releases/download/v1.0/samp_net.pth"
+SAMPNET_WEIGHTS_URL = "https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1"
 
 
 # =============================================================================
@@ -348,8 +348,9 @@ class SaliencyDetector:
     Auto-downloads weights on first use.
     """
 
-    def __init__(self, device='cuda', weights_path='pretrained_models/u2netp.pth'):
-        self.device = device if torch.cuda.is_available() else 'cpu'
+    def __init__(self, device=None, weights_path='pretrained_models/u2netp.pth'):
+        from utils.device import get_best_device
+        self.device = device or get_best_device()
         self.weights_path = weights_path
         self.model = None
         self._initialized = False
@@ -808,15 +809,16 @@ class SAMPNetScorer:
         # result: {'comp_score': 7.5, 'pattern': 'rule_of_thirds', ...}
     """
 
-    def __init__(self, model_path: str = None, device: str = 'cuda'):
+    def __init__(self, model_path: str = None, device: str = None):
         """
         Initialize SAMP-Net scorer with saliency detector.
 
         Args:
             model_path: Path to SAMP-Net weights. If None, uses default.
-            device: 'cuda' or 'cpu'
+            device: Target device. If None, auto-detects best available.
         """
-        self.device = device if torch.cuda.is_available() else 'cpu'
+        from utils.device import get_best_device
+        self.device = device or get_best_device()
         self.model_path = model_path or 'pretrained_models/samp_net.pth'
 
         # Image preprocessing (224x224 for SAMP-Net)
@@ -855,8 +857,8 @@ class SAMPNetScorer:
             print("SAMP-Net download complete.")
         except Exception as e:
             print(f"Failed to download SAMP-Net weights: {e}")
-            print("Please download manually from Google Drive:")
-            print("  https://drive.google.com/file/d/1sIcYr5cQGbxm--tCGaASmN0xtE_r-QUg/view")
+            print("Please download manually from Dropbox:")
+            print("  https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=0")
             print(f"  Place at: {self.model_path}")
             raise
 
@@ -1062,7 +1064,8 @@ def create_samp_scorer(config) -> SAMPNetScorer:
             samp_config = {}
 
         model_path = samp_config.get('model_path', 'pretrained_models/samp_net.pth')
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        from utils.device import get_best_device
+        device = get_best_device()
 
         return SAMPNetScorer(model_path=model_path, device=device)
     except Exception as e:

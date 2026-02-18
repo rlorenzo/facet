@@ -1,7 +1,7 @@
 """
 Image loading utilities for Facet.
 
-Handles RAW (CR2/CR3) and JPEG loading with EXIF transpose.
+Handles RAW (CR2/CR3), JPEG, and HEIC/HEIF loading with EXIF transpose.
 """
 
 import threading
@@ -9,6 +9,13 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
+
+# Register HEIC/HEIF support via pillow-heif (if available)
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
 
 # Lazy imports for heavy modules
 _cv2 = None

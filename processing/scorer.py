@@ -209,7 +209,7 @@ def _get_exif_orientation(photo_path):
         try:
             from PIL import Image, ExifTags
             img = Image.open(photo_path)
-            exif = img._getexif()
+            exif = img.getexif()
             if exif:
                 for tag_id, value in exif.items():
                     tag = ExifTags.TAGS.get(tag_id, tag_id)
@@ -432,7 +432,8 @@ class Facet:
             _load_image_modules()
             _load_gpu_modules()
 
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            from utils.device import get_best_device
+            self.device = get_best_device()
             print(f"Using {self.device}")
 
             # Check VRAM compatibility with configured profile
@@ -1584,7 +1585,7 @@ class Facet:
         # 3. Fallback to Pillow (Original logic for JPEGs)
         try:
             img = Image.open(image_path)
-            info = img._getexif()
+            info = img.getexif()
             if info:
                 for tag, value in info.items():
                     decoded = ExifTags.TAGS.get(tag, tag)
