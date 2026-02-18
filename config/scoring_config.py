@@ -394,6 +394,16 @@ class ScoringConfig:
             }
         })
 
+    def get_scanning_settings(self):
+        """Get directory scanning settings.
+
+        Returns settings for directory traversal during photo scanning,
+        including whether to skip hidden directories.
+        """
+        return self.config.get('scanning', {
+            'skip_hidden_directories': True
+        })
+
     def get_exif_adjustments(self):
         """Get EXIF-based scoring adjustment settings."""
         return self.config.get('exif_adjustments', {

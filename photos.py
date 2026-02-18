@@ -794,6 +794,10 @@ Configuration:
     extensions = ["*.jpg", "*.jpeg", "*.JPG", "*.JPEG", "*.cr2", "*.CR2", "*.cr3", "*.CR3"]
     valid_suffixes = {'.jpg', '.jpeg', '.cr2', '.cr3'}
     all_files = []
+
+    # Get scanning settings
+    skip_hidden = scorer.config.get_scanning_settings().get('skip_hidden_directories', True)
+
     for path_str in args.photo_paths:
         base_path = Path(path_str).resolve()
         if not base_path.exists():
@@ -806,9 +810,17 @@ Configuration:
             else:
                 print(f"Warning: Unsupported file type: {path_str}")
         else:
-            # Directory - use standard rglob for file discovery
-            for ext in extensions:
-                all_files.extend(list(base_path.rglob(ext)))
+            # Directory - use os.walk to traverse, optionally skipping hidden directories
+            for root, dirs, files in os.walk(base_path):
+                # Prune hidden directories if configured
+                if skip_hidden:
+                    dirs[:] = [d for d in dirs if not d.startswith('.')]
+
+                # Add matching files
+                for f in files:
+                    p = Path(root) / f
+                    if p.suffix.lower() in valid_suffixes:
+                        all_files.append(p)
 
     # Deduplicate (needed for case-insensitive filesystems like Windows)
     all_files = list({f.resolve(): f for f in all_files}.values())
