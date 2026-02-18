@@ -132,19 +132,28 @@ def get_onnx_providers() -> list:
     Returns:
         List of provider strings in priority order.
     """
-    providers = []
+    requested = []
     try:
         import torch
         if torch.cuda.is_available():
-            providers.append('CUDAExecutionProvider')
+            requested.append('CUDAExecutionProvider')
     except ImportError:
         pass
 
     if sys.platform == 'darwin':
-        providers.append('CoreMLExecutionProvider')
+        requested.append('CoreMLExecutionProvider')
 
-    providers.append('CPUExecutionProvider')
-    return providers
+    requested.append('CPUExecutionProvider')
+
+    # Filter against actually available providers to avoid failures
+    # (e.g. CoreML not compiled into the onnxruntime build)
+    try:
+        import onnxruntime as ort
+        available = set(ort.get_available_providers())
+        filtered = [p for p in requested if p in available]
+        return filtered if filtered else requested
+    except (ImportError, Exception):
+        return requested
 
 
 def get_insightface_ctx_id() -> int:

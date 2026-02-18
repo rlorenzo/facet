@@ -231,9 +231,10 @@ class RAMTagger:
 
                 try:
                     tags, _ = inference_ram(image_tensor, self.model)
-                except (torch.cuda.OutOfMemoryError, RuntimeError):
-                    # Clear cache and retry (RuntimeError covers MPS OOM)
-                    from utils.device import safe_empty_cache
+                except (torch.cuda.OutOfMemoryError, RuntimeError) as e:
+                    from utils.device import safe_empty_cache, is_oom_error
+                    if not isinstance(e, torch.cuda.OutOfMemoryError) and not is_oom_error(e):
+                        raise
                     safe_empty_cache()
                     image_tensor = self.transform(image).unsqueeze(0).to(self.device)
                     tags, _ = inference_ram(image_tensor, self.model)

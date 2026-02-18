@@ -163,7 +163,10 @@ def api_download_single():
             import pillow_heif
             pillow_heif.register_heif_opener()
         except ImportError:
-            pass
+            return jsonify(
+                {'error': 'HEIC/HEIF conversion is not available on this server '
+                          '(missing pillow-heif dependency)'}
+            ), 500
 
         pil_img = Image.open(disk_path)
         if pil_img.mode != 'RGB':

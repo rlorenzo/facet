@@ -659,9 +659,9 @@ class ScoringConfig:
 
         profile_descriptions = {
             '24gb': 'TOPIQ + Qwen2-VL',
-            '16gb': 'TOPIQ + SAMP-Net',
-            '8gb': 'TOPIQ + SAMP-Net',
-            'legacy': 'TOPIQ + SAMP-Net',
+            '16gb': 'TOPIQ + RAM++',
+            '8gb': 'CLIP+MLP + SAMP-Net',
+            'legacy': 'CLIP+MLP + rule-based',
         }
         desc = profile_descriptions.get(profile, profile)
         msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: {profile} ({desc})"

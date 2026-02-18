@@ -342,9 +342,9 @@ class ChunkedMultiPassProcessor:
                 try:
                     model = self.model_manager.load_model_only(model_name)
                     if model is None:
-                        print(f"\nModel '{model_name}' failed to load, trying fallback...")
-                        self._handle_oom(model_name)
-                        continue
+                        raise RuntimeError(
+                            f"Model '{model_name}' failed to load: load_model_only returned None."
+                        )
                     loaded_models[model_name] = model
                 except (RuntimeError, Exception) as e:
                     from utils.device import is_oom_error
