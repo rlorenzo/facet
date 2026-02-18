@@ -138,4 +138,4 @@ The automatic download for SAMP-Net weights may fail (the GitHub release URL is 
 Failed to download SAMP-Net weights: HTTP Error 404: Not Found
 ```
 
-Download manually from [Dropbox](https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1) and place the file at `pretrained_models/samp_net.pth`.
+Download manually from [Dropbox](https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&dl=1) and place the file at `pretrained_models/samp_net.pth`.

@@ -35,7 +35,7 @@ COMPOSITION_PATTERNS = [
 # Note: U2-Net-P weights must be downloaded from Google Drive
 U2NETP_GDRIVE_ID = "1rbSTGKAE-MTxBYHd-51l2hMOQPT_7EPy"
 U2NETP_GDRIVE_URL = f"https://drive.google.com/uc?export=download&id={U2NETP_GDRIVE_ID}"
-SAMPNET_WEIGHTS_URL = "https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1"
+SAMPNET_WEIGHTS_URL = "https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&dl=1"
 
 
 # =============================================================================
@@ -858,7 +858,7 @@ class SAMPNetScorer:
         except Exception as e:
             print(f"Failed to download SAMP-Net weights: {e}")
             print("Please download manually from Dropbox:")
-            print("  https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1")
+            print("  https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&dl=1")
             print(f"  Place at: {self.model_path}")
             raise
 

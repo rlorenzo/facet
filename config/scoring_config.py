@@ -582,7 +582,7 @@ class ScoringConfig:
         models_config = self.get_model_config()
         return models_config.get('samp_net', {
             'model_path': 'pretrained_models/samp_net.pth',
-            'download_url': 'https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&st=0ffubx5d&dl=1',
+            'download_url': 'https://www.dropbox.com/scl/fi/k1yuyhotuk9ky3m41iobg/samp_net.pth?rlkey=aoqqxv27wd5qqj3pytxki6vi3&dl=1',
             'input_size': 384,
             'patterns': ['none', 'center', 'rule_of_thirds', 'golden_ratio', 'triangle',
                         'horizontal', 'vertical', 'diagonal', 'symmetric',
@@ -660,8 +660,8 @@ class ScoringConfig:
         profile_descriptions = {
             '24gb': 'TOPIQ + Qwen2-VL',
             '16gb': 'TOPIQ + SAMP-Net + Qwen3-VL',
-            '8gb': 'CLIP+MLP + SAMP-Net',
-            'legacy': 'CLIP+MLP + rule-based',
+            '8gb': 'CLIP+MLP + SAMP-Net + Qwen3-VL',
+            'legacy': 'CLIP+MLP + SAMP-Net + CLIP tagging',
         }
         desc = profile_descriptions.get(profile, profile)
         msg = f"Detected {vram_gb:.1f}GB VRAM - recommended profile: {profile} ({desc})"
