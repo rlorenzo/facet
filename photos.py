@@ -791,7 +791,6 @@ Configuration:
         exit(1)
 
     # 1. Gather files recursively from subfolders (or single files)
-    extensions = ["*.jpg", "*.jpeg", "*.JPG", "*.JPEG", "*.cr2", "*.CR2", "*.cr3", "*.CR3"]
     valid_suffixes = {'.jpg', '.jpeg', '.cr2', '.cr3'}
     all_files = []
 
