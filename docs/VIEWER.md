@@ -1,12 +1,36 @@
 # Web Viewer
 
-Flask-based web gallery for browsing, filtering, and managing photos.
+FastAPI + Angular single-page application for browsing, filtering, and managing photos.
 
 ## Starting the Viewer
 
+### Production
+
 ```bash
-python viewer.py
-# Open http://localhost:5000
+python run_api.py
+# Open http://localhost:8000
+```
+
+This serves both the API and the pre-built Angular application on a single port.
+
+For higher throughput (4 Uvicorn workers):
+
+```bash
+python run_api.py --production
+```
+
+### Development
+
+Run the API server and Angular dev server separately:
+
+```bash
+# Terminal 1: API server
+python run_api.py
+# API available at http://localhost:8000
+
+# Terminal 2: Angular dev server with hot reload
+cd client && npx ng serve
+# Open http://localhost:4200 (proxies API calls to :8000)
 ```
 
 ## Authentication
@@ -156,11 +180,11 @@ Dropdown shows persons with face thumbnails. Click to filter gallery.
 
 ### Person Gallery
 
-Click person name to view all their photos at `/person/<id>`.
+Click person name to view all their photos at `/persons/<id>`.
 
 ### Manage Persons Page
 
-Access via header button or `/manage_persons`:
+Access via header button or `/persons`:
 
 | Action | How To |
 |--------|--------|
@@ -415,13 +439,32 @@ Filter dropdowns load on-demand via API:
 
 ## API Endpoints
 
+Interactive API documentation is available at `/api/docs` (Swagger UI) and the OpenAPI schema at `/api/openapi.json`.
+
 ### Gallery
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /` | Main gallery |
-| `GET /person/<id>` | Person photo gallery |
-| `GET /manage_persons` | Person management page |
+| `GET /api/photos` | Paginated photo list with filters |
+| `GET /api/type_counts` | Photo counts per type |
+| `GET /api/similar_photos/{path}` | Similar photos by embedding |
+| `GET /api/config` | Viewer configuration |
+
+### Authentication
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/login` | Authenticate and receive token |
+| `GET /api/auth/status` | Check authentication status |
+
+### Thumbnails and Images
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /thumbnail` | Photo thumbnail |
+| `GET /face_thumbnail/{id}` | Face crop thumbnail |
+| `GET /person_thumbnail/{id}` | Person representative thumbnail |
+| `GET /image` | Full-resolution image |
 
 ### Filter Options
 
@@ -434,11 +477,19 @@ Filter dropdowns load on-demand via API:
 | `GET /api/filter_options/patterns` | Composition patterns |
 | `GET /api/filter_options/categories` | Categories with counts |
 
+### Persons
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/persons` | List all persons |
+| `POST /api/persons/{id}/rename` | Rename a person |
+| `POST /api/persons/{id}/merge` | Merge person into another |
+| `DELETE /api/persons/{id}` | Delete a person |
+
 ### Statistics
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /stats` | Statistics page |
 | `GET /api/stats/gear` | Camera/lens/combo counts |
 | `GET /api/stats/settings` | Shooting settings distributions |
 | `GET /api/stats/timeline` | Timeline data |
@@ -473,3 +524,4 @@ Filter dropdowns load on-demand via API:
 | Password not working | Check `viewer.password` (single-user) or verify password hash (multi-user) |
 | User can't see photos | Check `directories` in their user config and `shared_directories` |
 | Scan button missing | Requires `superadmin` role and `viewer.features.show_scan_button: true` |
+| Port 8000 in use | Change port in `run_api.py` or kill the conflicting process |

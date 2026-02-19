@@ -1,0 +1,313 @@
+<div class="flex flex-col h-screen">
+  <!-- Toolbar -->
+  <mat-toolbar class="shrink-0 !px-4 !bg-[var(--mat-sys-surface-container)] border-b border-[var(--mat-sys-outline-variant)]">
+    <div class="flex items-center gap-3 w-full">
+      <!-- Logo / Brand -->
+      <a routerLink="/" class="flex items-center gap-2 no-underline text-inherit">
+        <mat-icon>diamond</mat-icon>
+        <span class="text-lg font-medium">Facet</span>
+      </a>
+
+      <!-- Nav links -->
+      @if (auth.isAuthenticated()) {
+        <nav class="hidden lg:flex items-center gap-1 ml-4">
+          <a mat-button routerLink="/">{{ 'nav.gallery' | translate }}</a>
+          <a mat-button routerLink="/persons">{{ 'nav.persons' | translate }}</a>
+          @if (auth.isEdition()) {
+            <a mat-button routerLink="/compare">{{ 'nav.compare' | translate }}</a>
+          }
+          <a mat-button routerLink="/stats">{{ 'nav.stats' | translate }}</a>
+        </nav>
+      }
+
+      <!-- Gallery type & sort (visible only on gallery route, lg+ to avoid toolbar cramping) -->
+      @if (auth.isAuthenticated() && isGalleryRoute()) {
+        <mat-form-field class="!hidden lg:!inline-flex w-52 ml-2" subscriptSizing="dynamic">
+          <mat-label>{{ 'ui.filters.type' | translate }}</mat-label>
+          <mat-select [value]="store.filters().type" (selectionChange)="onTypeChange($event.value)">
+            <mat-option value="">{{ 'gallery.all_photos' | translate }}</mat-option>
+            @for (t of store.types(); track t.id) {
+              <mat-option [value]="t.id">{{ t.label }} ({{ t.count }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field class="!hidden lg:!inline-flex w-48" subscriptSizing="dynamic">
+          <mat-label>{{ 'gallery.sort' | translate }}</mat-label>
+          <mat-select [value]="store.filters().sort" (selectionChange)="onSortChange($event.value)">
+            @if (sortGroups(); as groups) {
+              @for (group of groups; track group[0]) {
+                <mat-optgroup [label]="group[0]">
+                  @for (opt of group[1]; track opt.column) {
+                    <mat-option [value]="opt.column">{{ opt.label }}</mat-option>
+                  }
+                </mat-optgroup>
+              }
+            } @else {
+              <mat-option value="aggregate">{{ 'gallery.sort_aggregate' | translate }}</mat-option>
+              <mat-option value="aesthetic">{{ 'gallery.sort_aesthetic' | translate }}</mat-option>
+              <mat-option value="date_taken">{{ 'gallery.sort_date' | translate }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button
+          class="!hidden lg:!inline-flex"
+          mat-icon-button
+          (click)="toggleSortDirection()"
+          [matTooltip]="store.filters().sort_direction === 'DESC' ? ('gallery.sort_desc' | translate) : ('gallery.sort_asc' | translate)"
+        >
+          <mat-icon>{{
+            store.filters().sort_direction === 'DESC' ? 'arrow_downward' : 'arrow_upward'
+          }}</mat-icon>
+        </button>
+
+        <!-- Person multi-select -->
+        @if (store.persons().length) {
+          <mat-form-field class="!hidden lg:!inline-flex w-44 xl:w-52" subscriptSizing="dynamic">
+            <mat-label>{{ 'gallery.person' | translate }}</mat-label>
+            <mat-select
+              multiple
+              panelClass="person-select-panel"
+              [value]="selectedPersonIds()"
+              (selectionChange)="onPersonChange($event.value)"
+            >
+              <mat-select-trigger>
+                <div class="flex items-center gap-1.5 overflow-hidden">
+                  @for (p of selectedPersons(); track p.id) {
+                    <img
+                      [src]="p.id | personThumbnailUrl"
+                      [matTooltip]="p.name || ('gallery.unknown_person' | translate)"
+                      class="w-9 h-9 rounded-full object-cover shrink-0"
+                      alt=""
+                      loading="lazy"
+                      (error)="$event.target.style.display='none'"
+                    />
+                  }
+                </div>
+              </mat-select-trigger>
+              @for (p of store.persons(); track p.id) {
+                <mat-option [value]="'' + p.id">
+                  <div class="flex items-center gap-3">
+                    <img
+                      [src]="p.id | personThumbnailUrl"
+                      class="w-14 h-14 rounded-full object-cover shrink-0"
+                      alt=""
+                      loading="lazy"
+                      (error)="$event.target.style.display='none'"
+                    />
+                    <span class="text-sm">{{ p.name || ('gallery.unknown_person' | translate) }} ({{ p.face_count }})</span>
+                  </div>
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
+        <!-- Search -->
+        <mat-form-field class="!hidden lg:!inline-flex w-44 xl:w-56" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            [placeholder]="'gallery.search_placeholder' | translate"
+            [value]="store.filters().search"
+            (keyup.enter)="onSearchChange($event)"
+            (blur)="onSearchChange($event)"
+          />
+          @if (store.filters().search) {
+            <button matSuffix mat-icon-button (click)="clearSearch()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+      }
+
+      <div class="flex-1"></div>
+
+      <!-- Gallery: photo count + active filters + filter toggle (right side, lg+ only) -->
+      @if (auth.isAuthenticated() && isGalleryRoute()) {
+        <span class="!hidden lg:!inline text-sm opacity-70">{{ 'gallery.photo_count' | translate:{ count: store.total() } }}</span>
+
+        @if (store.activeFilterCount()) {
+          <mat-chip-set class="!hidden lg:!inline-flex">
+            <mat-chip (removed)="store.resetFilters()" highlighted>
+              {{ 'gallery.active_filters' | translate:{ count: store.activeFilterCount() } }}
+              <mat-icon matChipRemove>cancel</mat-icon>
+            </mat-chip>
+          </mat-chip-set>
+        }
+
+        <button
+          class="!hidden lg:!inline-flex"
+          mat-icon-button
+          (click)="store.filterDrawerOpen.set(!store.filterDrawerOpen())"
+          [matBadge]="store.activeFilterCount() || null"
+          matBadgeColor="primary"
+          matBadgeSize="small"
+          [matTooltip]="'gallery.filters' | translate"
+        >
+          <mat-icon>tune</mat-icon>
+        </button>
+      }
+
+      <!-- Language switcher -->
+      <button mat-icon-button [matMenuTriggerFor]="langMenu" [attr.aria-label]="'ui.switch_language' | translate">
+        <mat-icon>language</mat-icon>
+      </button>
+      <mat-menu #langMenu="matMenu">
+        <button mat-menu-item (click)="switchLang('en')">English</button>
+        <button mat-menu-item (click)="switchLang('fr')">Français</button>
+        <button mat-menu-item (click)="switchLang('de')">Deutsch</button>
+        <button mat-menu-item (click)="switchLang('it')">Italiano</button>
+        <button mat-menu-item (click)="switchLang('es')">Español</button>
+      </mat-menu>
+
+      <!-- Edition mode toggle (legacy single-user only) -->
+      @if (auth.isAuthenticated() && !auth.isMultiUser() && auth.status()?.edition_enabled) {
+        @if (auth.isEdition()) {
+          <button mat-icon-button (click)="lockEdition()" [matTooltip]="'edition.lock_title' | translate">
+            <mat-icon class="text-amber-400">lock_open</mat-icon>
+          </button>
+        } @else {
+          <button mat-icon-button (click)="showEditionDialog()" [matTooltip]="'edition.unlock_title' | translate">
+            <mat-icon>lock</mat-icon>
+          </button>
+        }
+      }
+
+      <!-- User menu -->
+      @if (auth.isAuthenticated()) {
+        <button mat-icon-button [matMenuTriggerFor]="userMenu">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          @if (auth.status()?.display_name) {
+            <div class="px-4 py-2 text-sm opacity-70">{{ auth.status()?.display_name }}</div>
+          }
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            {{ 'auth.logout' | translate }}
+          </button>
+        </mat-menu>
+      }
+
+      <!-- Mobile nav toggle -->
+      @if (auth.isAuthenticated()) {
+        <button mat-icon-button class="lg:!hidden" [matMenuTriggerFor]="mobileNav">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <mat-menu #mobileNav="matMenu">
+          <button mat-menu-item (click)="navigateTo('/')">
+            <mat-icon>photo_library</mat-icon>
+            {{ 'nav.gallery' | translate }}
+          </button>
+          <button mat-menu-item (click)="navigateTo('/persons')">
+            <mat-icon>people</mat-icon>
+            {{ 'nav.persons' | translate }}
+          </button>
+          @if (auth.isEdition()) {
+            <button mat-menu-item (click)="navigateTo('/compare')">
+              <mat-icon>tune</mat-icon>
+              {{ 'nav.compare' | translate }}
+            </button>
+          }
+          <button mat-menu-item (click)="navigateTo('/stats')">
+            <mat-icon>bar_chart</mat-icon>
+            {{ 'nav.stats' | translate }}
+          </button>
+        </mat-menu>
+      }
+    </div>
+  </mat-toolbar>
+
+  <!-- Mobile search bar (expandable, < md only) -->
+  @if (auth.isAuthenticated() && isGalleryRoute() && mobileSearchOpen()) {
+    <div class="lg:hidden flex items-center gap-2 px-3 py-2 bg-[var(--mat-sys-surface-container)] border-b border-[var(--mat-sys-outline-variant)]">
+      <mat-icon class="opacity-60">search</mat-icon>
+      <input
+        class="flex-1 bg-transparent outline-none text-sm"
+        [placeholder]="'gallery.search_placeholder' | translate"
+        [value]="store.filters().search"
+        (keyup.enter)="onSearchChange($event); mobileSearchOpen.set(false)"
+        (blur)="onSearchChange($event)"
+        autofocus
+      />
+      <button mat-icon-button (click)="clearSearch(); mobileSearchOpen.set(false)">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-auto pb-14 lg:pb-0">
+    <router-outlet />
+  </main>
+
+  <!-- Mobile gallery bottom bar (< md only) -->
+  @if (auth.isAuthenticated() && isGalleryRoute()) {
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-2 py-1 bg-[var(--mat-sys-surface-container)] border-t border-[var(--mat-sys-outline-variant)] safe-area-pb">
+      <!-- Type menu -->
+      <button mat-icon-button [matMenuTriggerFor]="mobileTypeMenu">
+        <mat-icon>photo_library</mat-icon>
+      </button>
+      <mat-menu #mobileTypeMenu="matMenu">
+        <button mat-menu-item (click)="onTypeChange('')">
+          <span [class.font-bold]="!store.filters().type">{{ 'gallery.all_photos' | translate }}</span>
+        </button>
+        @for (t of store.types(); track t.id) {
+          <button mat-menu-item (click)="onTypeChange(t.id)">
+            <span [class.font-bold]="store.filters().type === t.id">{{ t.label }} ({{ t.count }})</span>
+          </button>
+        }
+      </mat-menu>
+
+      <!-- Sort menu -->
+      <button mat-icon-button [matMenuTriggerFor]="mobileSortMenu">
+        <mat-icon>sort</mat-icon>
+      </button>
+      <mat-menu #mobileSortMenu="matMenu">
+        @if (sortGroups(); as groups) {
+          @for (group of groups; track group[0]; let last = $last) {
+            @for (opt of group[1]; track opt.column) {
+              <button mat-menu-item (click)="onSortChange(opt.column)">
+                <span [class.font-bold]="store.filters().sort === opt.column">{{ opt.label }}</span>
+              </button>
+            }
+            @if (!last) {
+              <mat-divider />
+            }
+          }
+        } @else {
+          <button mat-menu-item (click)="onSortChange('aggregate')">{{ 'gallery.sort_aggregate' | translate }}</button>
+          <button mat-menu-item (click)="onSortChange('aesthetic')">{{ 'gallery.sort_aesthetic' | translate }}</button>
+          <button mat-menu-item (click)="onSortChange('date_taken')">{{ 'gallery.sort_date' | translate }}</button>
+        }
+        <mat-divider />
+        <button mat-menu-item (click)="toggleSortDirection()">
+          <mat-icon>{{ store.filters().sort_direction === 'DESC' ? 'arrow_downward' : 'arrow_upward' }}</mat-icon>
+          {{ store.filters().sort_direction === 'DESC' ? ('gallery.sort_desc' | translate) : ('gallery.sort_asc' | translate) }}
+        </button>
+      </mat-menu>
+
+      <!-- Search toggle -->
+      <button mat-icon-button (click)="mobileSearchOpen.set(!mobileSearchOpen())">
+        <mat-icon>search</mat-icon>
+      </button>
+
+      <!-- Filter drawer toggle -->
+      <button
+        mat-icon-button
+        (click)="store.filterDrawerOpen.set(!store.filterDrawerOpen())"
+        [matBadge]="store.activeFilterCount() || null"
+        matBadgeColor="primary"
+        matBadgeSize="small"
+      >
+        <mat-icon>tune</mat-icon>
+      </button>
+
+      <!-- Photo count -->
+      <span class="text-xs opacity-70 min-w-[3ch] text-center">{{ store.total() }}</span>
+    </div>
+  }
+</div>

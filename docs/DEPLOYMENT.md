@@ -9,7 +9,7 @@ Facet has two distinct workloads:
 | Component | Hardware | Purpose |
 |-----------|----------|---------|
 | **Scoring** (`photos.py`) | GPU (6-24GB VRAM) or CPU (8GB+ RAM) | Analyze and score photos |
-| **Viewer** (`viewer.py`) | Any machine (low resources) | Serve the web gallery |
+| **Viewer** (`run_api.py`) | Any machine (low resources) | Serve the web gallery |
 
 Only the viewer needs to run on the server. Scoring is done on your workstation, then the database is synced.
 
@@ -51,6 +51,16 @@ Multiple mappings are supported (first match wins):
 - Both UNC paths (`\\server\share`) and drive letters (`Z:\`) are supported
 - The first matching prefix wins
 
+## Building the Angular Client
+
+The viewer uses an Angular SPA that must be built before deployment. The FastAPI server serves the pre-built files from `client/dist/client/browser/`.
+
+```bash
+cd client && npm ci && npx ng build && cd ..
+```
+
+This requires Node.js 20+ at build time only. The built files in `client/dist/` are static assets — Node.js is not needed on the server at runtime.
+
 ## Synology NAS (DS420j / J-series)
 
 The J-series has an ARM CPU and 1GB RAM. No Docker support. The viewer runs directly with Python.
@@ -74,7 +84,7 @@ ssh admin@your-synology-ip
 mkdir -p /volume1/facet
 
 # Install dependencies (viewer only)
-pip3 install flask gunicorn pillow
+pip3 install fastapi uvicorn pyjwt pillow
 ```
 
 ### Export Lightweight Database
@@ -94,13 +104,19 @@ The "Find Similar" feature won't work on the exported database (CLIP embeddings 
 
 ### Sync Files
 
-From your scoring machine, sync the viewer and exported database:
+On the scoring machine, build the Angular client first:
+
+```bash
+cd client && npm ci && npx ng build && cd ..
+```
+
+Then sync the viewer and exported database to the NAS:
 
 ```bash
 rsync -avz \
-  viewer.py person_viewer.py config.py database.py tagger.py \
+  run_api.py config.py database.py tagger.py \
   scoring_config.json photo_scores_viewer.db \
-  viewer/ comparison/ db/ i18n/ \
+  api/ client/dist/ db/ i18n/ \
   admin@your-synology-ip:/volume1/facet/
 ```
 
@@ -138,13 +154,13 @@ This overrides the global `performance` settings (which are tuned for scoring) w
 cd /volume1/facet
 
 # Test
-python3 viewer.py
+python3 run_api.py
 
 # Production (1 worker for 1GB RAM)
-gunicorn -w 1 -b 0.0.0.0:5000 --timeout 120 viewer:app
+uvicorn api:create_app --factory --host 0.0.0.0 --port 8000 --workers 1
 ```
 
-Access at `http://your-synology-ip:5000`
+Access at `http://your-synology-ip:8000`
 
 ### Auto-Start
 
@@ -155,7 +171,7 @@ DSM > Control Panel > Task Scheduler > Create > Triggered Task > User-defined sc
 - **Script:**
   ```bash
   cd /volume1/facet
-  /usr/local/bin/gunicorn -w 1 -b 0.0.0.0:5000 --timeout 120 viewer:app >> /var/log/facet.log 2>&1 &
+  /usr/local/bin/uvicorn api:create_app --factory --host 0.0.0.0 --port 8000 --workers 1 >> /var/log/facet.log 2>&1 &
   ```
 
 ### HTTPS
@@ -166,7 +182,7 @@ DSM > Control Panel > Login Portal > Advanced > Reverse Proxy:
 
 | Source | Destination |
 |--------|-------------|
-| `https://photos.yourdomain.com:443` | `http://localhost:5000` |
+| `https://photos.yourdomain.com:443` | `http://localhost:8000` |
 
 Pair with a Let's Encrypt certificate from DSM > Control Panel > Security > Certificate.
 
@@ -179,14 +195,14 @@ Plus-series NAS supports Docker (Container Manager). This is the cleanest approa
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app
-RUN pip install flask gunicorn
-COPY viewer.py person_viewer.py config.py database.py tagger.py scoring_config.json ./
-COPY viewer/ viewer/
-COPY comparison/ comparison/
+RUN pip install fastapi uvicorn pyjwt pillow
+COPY run_api.py config.py database.py tagger.py scoring_config.json ./
+COPY api/ api/
+COPY client/dist/ client/dist/
 COPY db/ db/
 COPY i18n/ i18n/
-EXPOSE 5000
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "120", "viewer:app"]
+EXPOSE 8000
+CMD ["uvicorn", "api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
 ```
 
 ### Docker Compose
@@ -196,7 +212,7 @@ services:
   facet:
     build: .
     ports:
-      - "5000:5000"
+      - "8000:8000"
     volumes:
       - ./photo_scores_pro.db:/app/photo_scores_pro.db
       - /volume1/Photos:/volume1/Photos:ro  # Mount photos for downloads
@@ -205,14 +221,20 @@ services:
 
 ## Generic Linux Server
 
-### Gunicorn
+### Uvicorn
 
 ```bash
-pip install flask gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 viewer:app
+pip install fastapi uvicorn pyjwt pillow
+uvicorn api:create_app --factory --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-### Gunicorn + Nginx
+Or use the convenience wrapper:
+
+```bash
+python run_api.py --production
+```
+
+### Uvicorn + Nginx
 
 ```nginx
 server {
@@ -220,7 +242,7 @@ server {
     server_name photos.yourdomain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:5000;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -245,7 +267,7 @@ After=network.target
 [Service]
 User=www-data
 WorkingDirectory=/opt/facet
-ExecStart=/usr/local/bin/gunicorn -w 4 -b 127.0.0.1:5000 --timeout 120 viewer:app
+ExecStart=/usr/local/bin/uvicorn api:create_app --factory --host 127.0.0.1 --port 8000 --workers 4
 Restart=always
 RestartSec=5
 
@@ -261,7 +283,7 @@ sudo systemctl enable --now facet
 
 ```
 photos.yourdomain.com {
-    reverse_proxy localhost:5000
+    reverse_proxy localhost:8000
 }
 ```
 
@@ -274,11 +296,11 @@ photos.yourdomain.com {
          │
          ├─ database.py --export-viewer-db
          │       │
-         │       └─ photo_scores_viewer.db ──rsync──▶ viewer.py serves gallery
+         │       └─ photo_scores_viewer.db ──rsync──▶ run_api.py serves gallery
          └─ scoring_config.json ────────────────────▶ (with path_mapping +
                                                        viewer.performance)
                                                         │
-                                                 http://nas:5000
+                                                 http://nas:8000
 ```
 
 Re-run the export and `rsync` after each scoring session to update the database on the server. For high-memory servers, you can sync the full `photo_scores_pro.db` directly instead of exporting.

@@ -1,0 +1,296 @@
+import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { GalleryStore, GalleryFilters } from './gallery.store';
+import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { GalleryComponent } from './gallery.component';
+import { ScoreClassPipe } from './gallery.component';
+
+describe('GalleryComponent', () => {
+  let component: GalleryComponent;
+
+  const defaultFilters: GalleryFilters = {
+    page: 1,
+    per_page: 64,
+    sort: 'aggregate',
+    sort_direction: 'DESC',
+    type: '',
+    camera: '',
+    lens: '',
+    tag: '',
+    person_id: '',
+    min_score: '',
+    max_score: '',
+    min_aesthetic: '',
+    max_aesthetic: '',
+    min_face_quality: '',
+    max_face_quality: '',
+    min_composition: '',
+    max_composition: '',
+    min_sharpness: '',
+    max_sharpness: '',
+    min_exposure: '',
+    max_exposure: '',
+    min_color: '',
+    max_color: '',
+    min_contrast: '',
+    max_contrast: '',
+    min_noise: '',
+    max_noise: '',
+    min_dynamic_range: '',
+    max_dynamic_range: '',
+    min_face_count: '',
+    max_face_count: '',
+    min_eye_sharpness: '',
+    max_eye_sharpness: '',
+    min_face_sharpness: '',
+    max_face_sharpness: '',
+    min_iso: '',
+    max_iso: '',
+    aperture: '',
+    focal_length: '',
+    date_from: '',
+    date_to: '',
+    composition_pattern: '',
+    hide_details: true,
+    hide_blinks: true,
+    hide_bursts: true,
+    hide_duplicates: true,
+    hide_rejected: true,
+    favorites_only: false,
+    is_monochrome: false,
+    search: '',
+  };
+
+  let mockStore: {
+    filters: ReturnType<typeof signal<GalleryFilters>>;
+    types: ReturnType<typeof signal>;
+    photos: ReturnType<typeof signal>;
+    total: ReturnType<typeof signal>;
+    loading: ReturnType<typeof signal>;
+    hasMore: ReturnType<typeof signal>;
+    cameras: ReturnType<typeof signal>;
+    lenses: ReturnType<typeof signal>;
+    tags: ReturnType<typeof signal>;
+    persons: ReturnType<typeof signal>;
+    config: ReturnType<typeof signal>;
+    activeFilterCount: ReturnType<typeof signal>;
+    filterDrawerOpen: ReturnType<typeof signal>;
+    loadConfig: jest.Mock;
+    loadFilterOptions: jest.Mock;
+    loadTypeCounts: jest.Mock;
+    loadPhotos: jest.Mock;
+    updateFilter: jest.Mock;
+    resetFilters: jest.Mock;
+    nextPage: jest.Mock;
+  };
+  let mockApi: { thumbnailUrl: jest.Mock };
+  let mockAuth: Record<string, unknown>;
+  let mockI18n: { t: jest.Mock };
+
+  beforeEach(() => {
+    mockStore = {
+      filters: signal<GalleryFilters>({ ...defaultFilters }),
+      types: signal([
+        { id: 'portrait', label: 'Portrait', count: 100 },
+        { id: 'landscape', label: 'Landscape', count: 200 },
+        { id: 'macro', label: 'Macro', count: 50 },
+      ]),
+      photos: signal([]),
+      total: signal(0),
+      loading: signal(false),
+      hasMore: signal(false),
+      cameras: signal([]),
+      lenses: signal([]),
+      tags: signal([]),
+      persons: signal([]),
+      config: signal(null),
+      activeFilterCount: signal(0),
+      filterDrawerOpen: signal(false),
+      loadConfig: jest.fn(() => Promise.resolve()),
+      loadFilterOptions: jest.fn(() => Promise.resolve()),
+      loadTypeCounts: jest.fn(() => Promise.resolve()),
+      loadPhotos: jest.fn(() => Promise.resolve()),
+      updateFilter: jest.fn(() => Promise.resolve()),
+      resetFilters: jest.fn(() => Promise.resolve()),
+      nextPage: jest.fn(() => Promise.resolve()),
+    };
+
+    mockApi = {
+      thumbnailUrl: jest.fn((path: string) => `/thumbnail?path=${path}`),
+    };
+
+    mockAuth = {};
+
+    mockI18n = {
+      t: jest.fn((key: string) => key),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: GalleryStore, useValue: mockStore },
+        { provide: ApiService, useValue: mockApi },
+        { provide: AuthService, useValue: mockAuth },
+        { provide: I18nService, useValue: mockI18n },
+      ],
+    });
+    component = TestBed.runInInjectionContext(() => new GalleryComponent());
+  });
+
+  describe('ScoreClassPipe', () => {
+    let pipe: ScoreClassPipe;
+
+    beforeEach(() => {
+      pipe = new ScoreClassPipe();
+    });
+
+    it('should return green class for score >= 8 (no config)', () => {
+      expect(pipe.transform(8, null)).toBe('bg-green-600 text-white');
+      expect(pipe.transform(9.5, null)).toBe('bg-green-600 text-white');
+      expect(pipe.transform(10, null)).toBe('bg-green-600 text-white');
+    });
+
+    it('should return yellow class for score >= 6 and < 8 (no config)', () => {
+      expect(pipe.transform(6, null)).toBe('bg-yellow-600 text-white');
+      expect(pipe.transform(7.9, null)).toBe('bg-yellow-600 text-white');
+    });
+
+    it('should return orange class for score >= 4 and < 6 (no config)', () => {
+      expect(pipe.transform(4, null)).toBe('bg-orange-600 text-white');
+      expect(pipe.transform(5.9, null)).toBe('bg-orange-600 text-white');
+    });
+
+    it('should return red class for score < 4 (no config)', () => {
+      expect(pipe.transform(3.9, null)).toBe('bg-red-600 text-white');
+      expect(pipe.transform(0, null)).toBe('bg-red-600 text-white');
+      expect(pipe.transform(1, null)).toBe('bg-red-600 text-white');
+    });
+
+    it('should use config thresholds when provided', () => {
+      const config = { quality_thresholds: { excellent: 9, great: 7, good: 5, best: 10 } };
+      expect(pipe.transform(9, config)).toBe('bg-green-600 text-white');
+      expect(pipe.transform(7, config)).toBe('bg-yellow-600 text-white');
+      expect(pipe.transform(5, config)).toBe('bg-orange-600 text-white');
+      expect(pipe.transform(4, config)).toBe('bg-red-600 text-white');
+    });
+  });
+
+  describe('onRangeChange()', () => {
+    it('should set empty string when min value is 0', () => {
+      component.onRangeChange('min_score', 0);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('min_score', '');
+    });
+
+    it('should set empty string when max value is 10', () => {
+      component.onRangeChange('max_score', 10);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('max_score', '');
+    });
+
+    it('should set string value for non-boundary min', () => {
+      component.onRangeChange('min_score', 3);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('min_score', '3');
+    });
+
+    it('should set string value for non-boundary max', () => {
+      component.onRangeChange('max_score', 8);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('max_score', '8');
+    });
+
+    it('should set empty string for min_aesthetic at 0', () => {
+      component.onRangeChange('min_aesthetic', 0);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('min_aesthetic', '');
+    });
+
+    it('should set empty string for max_aesthetic at 10', () => {
+      component.onRangeChange('max_aesthetic', 10);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('max_aesthetic', '');
+    });
+
+    it('should set string value for decimal scores', () => {
+      component.onRangeChange('min_score', 5.5);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('min_score', '5.5');
+    });
+  });
+
+  describe('onExifRangeChange()', () => {
+    it('should set empty string when value equals boundary', () => {
+      component.onExifRangeChange('min_iso', 0, 0);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('min_iso', '');
+    });
+
+    it('should set string value when value differs from boundary', () => {
+      component.onExifRangeChange('min_iso', 400, 0);
+      expect(mockStore.updateFilter).toHaveBeenCalledWith('min_iso', '400');
+    });
+  });
+
+  describe('ngOnInit()', () => {
+    it('should call store.loadConfig, loadFilterOptions, loadTypeCounts, and loadPhotos', async () => {
+      await component.ngOnInit();
+
+      expect(mockStore.loadConfig).toHaveBeenCalled();
+      expect(mockStore.loadFilterOptions).toHaveBeenCalled();
+      expect(mockStore.loadTypeCounts).toHaveBeenCalled();
+      expect(mockStore.loadPhotos).toHaveBeenCalled();
+    });
+
+    it('should call loadConfig before loadFilterOptions and loadTypeCounts', async () => {
+      const callOrder: string[] = [];
+      mockStore.loadConfig.mockImplementation(() => {
+        callOrder.push('loadConfig');
+        return Promise.resolve();
+      });
+      mockStore.loadFilterOptions.mockImplementation(() => {
+        callOrder.push('loadFilterOptions');
+        return Promise.resolve();
+      });
+      mockStore.loadTypeCounts.mockImplementation(() => {
+        callOrder.push('loadTypeCounts');
+        return Promise.resolve();
+      });
+      mockStore.loadPhotos.mockImplementation(() => {
+        callOrder.push('loadPhotos');
+        return Promise.resolve();
+      });
+
+      await component.ngOnInit();
+
+      expect(callOrder.indexOf('loadConfig')).toBeLessThan(
+        callOrder.indexOf('loadFilterOptions'),
+      );
+      expect(callOrder.indexOf('loadConfig')).toBeLessThan(
+        callOrder.indexOf('loadTypeCounts'),
+      );
+    });
+
+    it('should call loadPhotos after loadFilterOptions and loadTypeCounts', async () => {
+      const callOrder: string[] = [];
+      mockStore.loadConfig.mockImplementation(() => {
+        callOrder.push('loadConfig');
+        return Promise.resolve();
+      });
+      mockStore.loadFilterOptions.mockImplementation(() => {
+        callOrder.push('loadFilterOptions');
+        return Promise.resolve();
+      });
+      mockStore.loadTypeCounts.mockImplementation(() => {
+        callOrder.push('loadTypeCounts');
+        return Promise.resolve();
+      });
+      mockStore.loadPhotos.mockImplementation(() => {
+        callOrder.push('loadPhotos');
+        return Promise.resolve();
+      });
+
+      await component.ngOnInit();
+
+      expect(callOrder.indexOf('loadPhotos')).toBeGreaterThan(
+        callOrder.indexOf('loadFilterOptions'),
+      );
+      expect(callOrder.indexOf('loadPhotos')).toBeGreaterThan(
+        callOrder.indexOf('loadTypeCounts'),
+      );
+    });
+  });
+});

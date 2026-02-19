@@ -3,6 +3,8 @@
 A multi-dimensional photo analysis engine that examines every facet of an image — from aesthetic appeal and composition to facial detail and technical precision — using an ensemble of vision models to surface the photos that truly shine.
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
+![Angular](https://img.shields.io/badge/Angular-20-dd0031)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Docker-lightgrey)
 
 <p align="center">
@@ -51,19 +53,21 @@ Filter drawer with 50+ options organized in collapsible sections: display toggle
 
 <table><tr>
 <td><img src="docs/screenshots/stats-gear.png" alt="Equipment stats" width="100%"></td>
-<td><img src="docs/screenshots/stats-settings.png" alt="Shooting settings stats" width="100%"></td>
+<td><img src="docs/screenshots/stats-categories.png" alt="Category analytics" width="100%"></td>
 </tr><tr>
+<td><img src="docs/screenshots/stats-settings.png" alt="Score distribution" width="100%"></td>
 <td><img src="docs/screenshots/stats-timeline.png" alt="Timeline stats" width="100%"></td>
-<td><img src="docs/screenshots/stats-correlations.png" alt="Correlation charts" width="100%"></td>
+</tr><tr>
+<td colspan="2"><img src="docs/screenshots/stats-correlations.png" alt="Correlation charts" width="50%"></td>
 </tr></table>
 
-Interactive dashboards with four tabs: gear usage (cameras, lenses, body+lens combos, category distribution), shooting settings (ISO, aperture, focal length, shutter speed, score distribution), timeline heatmaps, and configurable correlation charts.
+Interactive dashboards with five tabs: gear usage (cameras, lenses, body+lens combos), category analytics (breakdown, weights, correlations, overlap), score distribution (ISO, aperture, focal length, shutter speed), timeline heatmaps, and configurable correlation charts.
 
-### Pairwise Comparison
+### Weight Tuning
 
-<img src="docs/screenshots/compare.jpg" alt="Pairwise comparison" width="100%">
+<img src="docs/screenshots/compare.jpg" alt="Weight tuning with pairwise comparison" width="100%">
 
-Side-by-side photo comparison with keyboard shortcuts (A/B/T/S). Four pair selection strategies (uncertainty, boundary, active learning, random). The system learns from your choices and suggests per-category weight adjustments with preview scoring.
+Per-category weight editor with live preview of top-scored photos. Side-by-side pairwise comparison with keyboard shortcuts and four selection strategies (uncertainty, boundary, active learning, random). The system learns from your choices and suggests per-category weight adjustments with prediction accuracy tracking.
 
 ### Mobile Responsive
 
@@ -74,16 +78,19 @@ Full-width cards on mobile with touch-friendly controls. Desktop shows detailed 
 ## Quick Start
 
 ```bash
-# Install dependencies
+# Install Python dependencies
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+
+# Install Angular frontend
+cd client && npm install && npx ng build && cd ..
 
 # Score photos (auto-detects VRAM, uses multi-pass mode)
 python photos.py /path/to/photos
 
-# View results
-python viewer.py
-# Open http://localhost:5000
+# Run the web viewer (FastAPI API + Angular SPA)
+python run_api.py
+# Open http://localhost:8000
 ```
 
 VRAM is auto-detected at startup. Use `--single-pass` to keep all models loaded simultaneously on high-VRAM systems, or `--pass quality|tags|composition` to run a specific pass.

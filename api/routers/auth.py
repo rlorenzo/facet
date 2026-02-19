@@ -1,0 +1,116 @@
+"""
+Authentication router.
+
+Handles login, logout, edition auth, auth status, and person share tokens.
+"""
+
+import hmac
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from api.auth import (
+    create_access_token, verify_password,
+    generate_person_share_token,
+    CurrentUser, get_optional_user, require_authenticated,
+    is_edition_enabled, is_edition_authenticated,
+)
+from api.config import (
+    VIEWER_CONFIG, is_multi_user_enabled, get_user_config
+)
+from api.models.auth import (
+    LoginRequest, LoginResponse, EditionLoginRequest, AuthStatusResponse
+)
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+@router.post("/login", response_model=LoginResponse)
+async def login(body: LoginRequest):
+    """Authenticate and receive a JWT token.
+
+    In multi-user mode: requires username + password.
+    In legacy mode: requires password only (matches viewer password).
+    """
+    multi_user = is_multi_user_enabled()
+
+    if multi_user:
+        if not body.username:
+            raise HTTPException(status_code=400, detail="Username required")
+        user = get_user_config(body.username)
+        if not user or not verify_password(body.password, user.get('password_hash', '')):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        token = create_access_token({
+            'sub': body.username,
+            'role': user.get('role', 'user'),
+            'display_name': user.get('display_name', body.username),
+            'edition': user.get('role', 'user') in ('admin', 'superadmin'),
+        })
+        return LoginResponse(
+            access_token=token,
+            user={
+                'user_id': body.username,
+                'role': user.get('role', 'user'),
+                'display_name': user.get('display_name', body.username),
+            }
+        )
+    else:
+        # Legacy single-password mode
+        password = VIEWER_CONFIG.get('password', '')
+        if not password:
+            # No password required — return a token for no-auth mode
+            token = create_access_token({'sub': '_anonymous', 'role': 'user'})
+            return LoginResponse(access_token=token)
+
+        if not hmac.compare_digest(body.password, password):
+            raise HTTPException(status_code=401, detail="Invalid password")
+
+        token = create_access_token({'sub': '_legacy', 'role': 'user'})
+        return LoginResponse(access_token=token)
+
+
+@router.post("/edition/login", response_model=LoginResponse)
+async def edition_login(body: EditionLoginRequest):
+    """Authenticate for edition mode (legacy single-user only)."""
+    if is_multi_user_enabled():
+        raise HTTPException(status_code=400, detail="Use /api/auth/login for multi-user auth")
+    edition_password = VIEWER_CONFIG.get('edition_password', '')
+    if not edition_password or not hmac.compare_digest(body.password, edition_password):
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+    token = create_access_token({
+        'sub': '_legacy',
+        'role': 'user',
+        'edition': True,
+    })
+    return LoginResponse(access_token=token)
+
+
+@router.get("/status", response_model=AuthStatusResponse)
+async def auth_status(user: Optional[CurrentUser] = Depends(get_optional_user)):
+    """Get current authentication status and available features."""
+    multi_user = is_multi_user_enabled()
+    authenticated = user is not None and user.is_authenticated
+    edition_auth = is_edition_authenticated(user) if user else False
+
+    return AuthStatusResponse(
+        authenticated=authenticated,
+        multi_user=multi_user,
+        edition_enabled=is_edition_enabled(),
+        edition_authenticated=edition_auth,
+        user_id=user.user_id if user else None,
+        user_role=user.role if user else None,
+        display_name=user.display_name if user else None,
+        features=VIEWER_CONFIG.get('features', {}),
+    )
+
+
+@router.get("/person/{person_id}/share-token")
+async def person_share_token(
+    person_id: int,
+    user: CurrentUser = Depends(require_authenticated),
+):
+    """Generate a share URL token for a person page."""
+    if user.shared_person_id is not None:
+        raise HTTPException(status_code=403, detail="Share visitors cannot generate share tokens")
+    token = generate_person_share_token(person_id)
+    return {'token': token}

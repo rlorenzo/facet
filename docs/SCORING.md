@@ -234,7 +234,7 @@ Train weights by comparing photo pairs:
 ### Setup
 
 1. Set a non-empty `edition_password` in config: `"viewer": { "edition_password": "your-password" }`
-2. Start viewer: `python viewer.py`
+2. Start viewer: `python run_api.py`
 3. Click "Compare" button
 
 ### Comparison Interface

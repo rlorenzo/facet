@@ -78,7 +78,7 @@ When cuML is available, face clustering automatically uses GPU (configurable via
 ## Verify Installation
 
 ```bash
-python -c "import torch, cv2, flask, insightface, open_clip, numpy, scipy, sklearn, PIL, imagehash, rawpy, tqdm, exifread; print('All imports successful')"
+python -c "import torch, cv2, fastapi, insightface, open_clip, numpy, scipy, sklearn, PIL, imagehash, rawpy, tqdm, exifread; print('All imports successful')"
 ```
 
 ## Dependencies Summary
@@ -93,7 +93,8 @@ python -c "import torch, cv2, flask, insightface, open_clip, numpy, scipy, sklea
 | `pillow` | Image loading |
 | `imagehash` | Perceptual hashing for burst detection |
 | `rawpy` | RAW file support |
-| `flask` | Web viewer |
+| `fastapi`, `uvicorn` | API server |
+| `pyjwt` | JWT authentication |
 | `numpy` | Numerical operations |
 | `tqdm` | Progress bars |
 | `exifread` | EXIF metadata extraction |
@@ -124,6 +125,16 @@ On first run, Facet automatically downloads:
 - SAMP-Net weights (all profiles): ~50MB
 
 Models are cached in standard locations (`~/.cache/` or `~/.insightface/`).
+
+## Angular Client (Optional)
+
+```bash
+# Only needed for development or custom builds
+cd client
+npm ci
+npx ng build    # Production build → client/dist/
+npx ng serve    # Dev server on http://localhost:4200 (proxies API to :8000)
+```
 
 ### SAMP-Net Manual Download
 

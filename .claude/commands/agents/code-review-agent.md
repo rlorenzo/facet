@@ -24,9 +24,9 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
 2. **Automated Analysis:**
    - Validate Python syntax: `python3 -c "import py_compile; py_compile.compile('file.py', doraise=True)"`
    - Validate JSON translations: `python3 -c "import json; json.load(open('file.json'))"`
-   - Validate Jinja2 templates: `python3 -c "from jinja2 import Environment; Environment().parse(open('file.html').read())"`
-   - Verify Flask app initializes: `python3 -c "from viewer import create_app; create_app()"`
-   - Check route registration if routes changed
+   - Verify FastAPI app initializes: `python3 -c "from api import create_app; create_app()"`
+   - Angular build check (if client/ changed): `npx ng build` from `client/`
+   - Check router registration if API routes changed
 
 3. **Facet-Specific Checks:**
 
@@ -40,32 +40,46 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
    - No string interpolation in WHERE/VALUES clauses (use parameterized `?`)
    - f-strings only for column/table names (never user input)
    - Proper use of `get_db_connection()` with connection closing
-   - Visibility filtering via `_vis_where()` or `get_visibility_clause()` in multi-user endpoints
+   - Visibility filtering via `get_visibility_clause()` in multi-user endpoints
 
    **Configuration Handling:**
    - Config changes create timestamped backups via `shutil.copy2`
    - `reload_config()` called after config writes
    - `_stats_cache.clear()` called when data changes
    - Weight keys use `_percent` suffix consistently
+   - Weight components must sum to 100% after save/apply — normalize before persisting
+   - API weight endpoints must pad responses with all 16 optimizer dimensions (0 for unconfigured)
+
+   **API Percentage Values:**
+   - API returns scores as 0-100 integers (percentages), NOT 0-1 fractions
+   - Frontend must NOT multiply by 100 again — flag any `* 100` on `_percent` suffixed values or values from weight/learned_weights endpoints
+   - `improvement` from optimize/suggest endpoints is already a percentage — display as-is
 
    **i18n Completeness:**
-   - New UI text uses `{{ _('key') }}` (server-side) or `t('key')` (client-side JS)
+   - Angular templates use `{{ 'key' | translate }}` via `TranslatePipe`
    - Both `en.json` and `fr.json` updated with matching keys
    - Translation keys follow dot-notation nesting (`section.subsection.key`)
-   - No hardcoded user-facing strings in templates or JS
+   - No hardcoded user-facing strings in Angular templates or TypeScript
 
-   **Flask/Viewer Patterns:**
-   - `@require_edition` decorator on write endpoints
-   - `is_edition_authenticated()` for template gating
-   - `_get_stats_cached(key, compute_fn)` for expensive queries
-   - Cache keys include `get_session_user_id()` for multi-user isolation
+   **FastAPI Backend Patterns:**
+   - `Depends(require_edition)` on write endpoints
+   - `Depends(require_authenticated)` on read endpoints needing auth
+   - `Depends(get_optional_user)` for endpoints with optional auth
+   - `get_cached_count(key, compute_fn)` for expensive queries
+   - Cache keys include user_id for multi-user isolation
+   - Pydantic models in `api/models/` for request/response validation
+   - Routers in `api/routers/` registered via `APIRouter(tags=[...])`
    - Subprocess calls use `sys.executable` (not hardcoded `python`)
 
-   **Frontend Patterns:**
-   - Chart.js charts use `makeChart()` helper or follow existing patterns
-   - New charts destroyed before recreation (prevent memory leaks)
-   - CSS uses Tailwind utility classes (no custom CSS unless necessary)
-   - Loading states for async operations
+   **Angular Frontend Patterns:**
+   - Standalone components with inline templates (no separate HTML files)
+   - Signal-based state: `signal()`, `computed()`, `input()`, `output()`
+   - No zone.js, no `ChangeDetectorRef`, no `markForCheck()`
+   - Services use `firstValueFrom()` for HTTP-to-promise conversion
+   - Effects use `onCleanup` for subscription cleanup
+   - No `fakeAsync` + `TestBed.flushEffects()` in tests (causes NG0101)
+   - CSS uses Tailwind utility classes; SCSS files need `@reference "tailwindcss";` before `@apply`
+   - Angular Material with `NoopAnimationsModule` in tests
 
    **Scoring Engine:**
    - `ScoringConfig` accessed via `get_weights(category)`, never raw dict access
@@ -75,9 +89,9 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
 
 4. **Error & Issue Discovery:**
    - **SQL Injection**: User input in f-string SQL queries
-   - **XSS**: Unescaped user content in templates (use `| e` or `| tojson`)
+   - **XSS**: Angular sanitizes by default, but watch for `[innerHTML]` bindings
    - **Path Traversal**: Unsanitized file paths in config/thumbnail endpoints
-   - **Resource Leaks**: DB connections not closed, Chart.js instances not destroyed
+   - **Resource Leaks**: DB connections not closed, subscriptions without cleanup
    - **Race Conditions**: Concurrent config writes without locking
    - **Data Loss**: Config writes without backup, destructive DB operations without confirmation
 
@@ -95,7 +109,7 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
 ### Summary
 - **Files Changed**: X files (+Y lines, -Z lines)
 - **Risk Level**: Low/Medium/High
-- **Automated Checks**: Syntax/JSON/Template/App results
+- **Automated Checks**: Syntax/JSON/Build results
 
 ### Critical Issues 🚨
 {Only show if found: blocking issues, breaking changes, security vulnerabilities}
@@ -122,7 +136,7 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
 ### Multi-User Safety 👥
 {Only show if found: endpoints missing visibility filtering, cache keys without user_id}
 - **[File:Line]**: Endpoint or query missing user-awareness
-  - **Fix**: Add `_vis_where()` or user-scoped cache key
+  - **Fix**: Add `get_visibility_clause()` or user-scoped cache key
 
 ### Performance Issues ⚡
 {Only show if found: N+1 queries, missing caching, unbounded results, memory leaks}
@@ -137,9 +151,8 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
 ### Automated Checks
 - **Python Syntax**: Pass/Fail
 - **JSON Validity**: Pass/Fail (en.json, fr.json)
-- **Template Syntax**: Pass/Fail
+- **Angular Build**: Pass/Fail (if client/ changed)
 - **App Init**: Pass/Fail
-- **Routes**: All expected routes registered
 
 ### Improved Commit Message
 ```
@@ -157,27 +170,27 @@ You are a **Code Review Agent**, an expert developer specialized in analyzing co
 - `--recompute-category` or `--recompute-average` documented/triggered
 
 ### New API Endpoints
-- Proper blueprint registration (`stats_bp`, `comparison_bp`, etc.)
-- `@require_edition` on write endpoints
-- Multi-user visibility via `_vis_where()`
+- Router in `api/routers/`, registered in `api/__init__.py`
+- `Depends(require_edition)` on write endpoints
+- Multi-user visibility via `get_visibility_clause()`
 - User-scoped cache keys
-- Error handling with `jsonify` responses
+- Pydantic models for request/response validation
 - Input validation on required parameters
 
-### Template/Frontend Changes
-- Server-side strings use `{{ _('key') }}`
-- JS strings use `t('key')` from `I18N` object
-- Both EN and FR translation files updated
-- Chart instances destroyed before recreation
-- Loading/error states for async fetches
-- `EDITION_AUTH` gating for editor UI
+### Angular Component Changes
+- Standalone component with inline template
+- Signal-based state (`signal()`, `computed()`, `input()`, `output()`)
+- `I18nService.t('key')` for translations (both EN and FR updated)
+- Tailwind utility classes (no custom CSS unless necessary)
+- `@reference "tailwindcss";` in SCSS files using `@apply`
+- Loading/error states for async operations
 
 ### Database Queries
 - Parameterized queries (no user input in f-strings)
 - Connections closed after use
 - Indexes leveraged (use `photo_tags` table for tag queries)
 - Large result sets paginated or cached
-- `_vis_where()` appended for multi-user filtering
+- `get_visibility_clause()` appended for multi-user filtering
 
 ## Quality Standards
 

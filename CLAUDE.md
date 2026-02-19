@@ -5,6 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Rules
 
 - **No backward-compatibility fallbacks.** When renaming or restructuring config keys, methods, or APIs, do NOT add legacy aliases, fallback lookups, or shims for old names. Update all references to use the new names directly. Old names should be removed completely.
+- **No custom CSS classes in Angular components.** Use plain Tailwind CSS utilities exclusively. Never define custom CSS classes in component `styles`. Use Angular `host` property for `:host` styling (e.g., `host: { class: 'block h-full' }`). All styling must be done via Tailwind utility classes in templates.
+- **Use pipes instead of method calls in Angular templates.** Never call component methods from template expressions (e.g., `{{ method(value) }}`). Use Angular pipes for data transformation in templates to avoid unnecessary change detection cycles.
+
+## Code Review
+
+Run `/agents:code-review-agent` to review commits and changes. Supports reviewing the last commit, uncommitted changes, or specific files with configurable depth (quick/standard/deep) and focus areas (security, performance, sql, i18n, config).
 
 ## Project Overview
 
@@ -100,13 +106,13 @@ python database.py --optimize       # Run both VACUUM and ANALYZE for full optim
 python database.py --add-user USERNAME --role ROLE [--display-name NAME]
 python database.py --migrate-user-preferences --user USERNAME
 
-# Run web viewer (Flask on localhost:5000)
-python viewer.py
+# Run web viewer (FastAPI + Angular on localhost:8000)
+python run_api.py
 ```
 
 ## Dependencies
 
-Python packages: `torch`, `torchvision`, `open-clip-torch`, `opencv-python`, `pillow`, `imagehash`, `rawpy`, `flask`, `numpy`, `tqdm`, `exifread`, `insightface`, `scipy`, `scikit-learn`, `hdbscan`, `pyiqa`, `psutil`
+Python packages: `torch`, `torchvision`, `open-clip-torch`, `opencv-python`, `pillow`, `imagehash`, `rawpy`, `fastapi`, `uvicorn`, `pyjwt`, `numpy`, `tqdm`, `exifread`, `insightface`, `scipy`, `scikit-learn`, `hdbscan`, `pyiqa`, `psutil`
 
 For VLM tagging (8gb+ profiles): `transformers>=4.57.0`, `accelerate>=0.25.0`
 
@@ -133,7 +139,7 @@ External tool: `exiftool` (command-line)
 
 **tagger.py** - CLIP-based semantic tagging with configurable vocabulary
 
-**viewer.py** - Flask web gallery with filtering, sorting, face recognition, and tag search
+**run_api.py** - FastAPI server entry point (API + Angular SPA on port 8000)
 
 **scoring_config.json** - All configurable weights, thresholds, and model settings
 
@@ -153,7 +159,7 @@ External tool: `exiftool` (command-line)
 3. Each image gets: CLIP embedding + tags, aesthetic score, face analysis, technical metrics, composition pattern
 4. Results stored in SQLite with 640x640 thumbnail BLOBs
 5. Post-processing groups images into bursts, flags best-of-burst
-6. `viewer.py` serves the gallery with filtering by tag, person, camera, score
+6. `run_api.py` serves the API and Angular SPA with filtering by tag, person, camera, score
 
 ### Scoring Algorithm
 
@@ -170,51 +176,9 @@ Photos are categorized by content and scored with specialized weights:
 
 Each category has configurable weights in `scoring_config.json` using `_percent` suffix (e.g., `face_quality_percent: 30`).
 
-### Category Filters Reference
+### Category Filters & Modifiers
 
-Each category in `scoring_config.json` has a `filters` block that determines when a photo matches that category. Evaluated by `CategoryFilter` in `config.py`.
-
-**Numeric range filters** (suffix `_min`/`_max`):
-| Filter | Field | Description |
-|--------|-------|-------------|
-| `face_ratio_min` / `face_ratio_max` | `face_ratio` | Face area as fraction of frame (0.0-1.0) |
-| `face_count_min` / `face_count_max` | `face_count` | Number of detected faces |
-| `iso_min` / `iso_max` | `ISO` | Camera ISO sensitivity |
-| `shutter_speed_min` / `shutter_speed_max` | `shutter_speed` | Exposure time in seconds |
-| `luminance_min` / `luminance_max` | `mean_luminance` | Average image brightness (0.0-1.0) |
-| `focal_length_min` / `focal_length_max` | `focal_length` | Lens focal length in mm |
-| `f_stop_min` / `f_stop_max` | `f_stop` | Aperture f-number |
-
-**Boolean filters** (true/false):
-| Filter | Description |
-|--------|-------------|
-| `has_face` | Photo contains at least one detected face |
-| `is_monochrome` | Photo is black & white (saturation < 5%) |
-| `is_silhouette` | Backlit subject with heavy shadows + highlights |
-| `is_group_portrait` | Multiple faces detected |
-
-**Tag filters**:
-| Filter | Description |
-|--------|-------------|
-| `required_tags` | List of tag names the photo must have |
-| `excluded_tags` | List of tag names the photo must NOT have |
-| `tag_match_mode` | `"any"` (default) = at least one tag matches; `"all"` = all tags must match |
-
-### Category Modifiers Reference
-
-The `modifiers` block adjusts scoring behavior for matched photos:
-
-| Modifier | Type | Description |
-|----------|------|-------------|
-| `bonus` | float | Added to final aggregate score (e.g., 0.3 = +0.3 pts) |
-| `noise_tolerance_multiplier` | float | Scales noise penalty (0.5 = half penalty, good for night/astro) |
-| `iso_tolerance_multiplier` | float | Scales ISO-based penalty |
-| `min_saturation_bonus` | float | Bonus for high saturation (concerts with colored lights) |
-| `contrast_bonus` | float | Bonus for high contrast scenes |
-| `_skip_clipping_penalty` | bool | Don't penalize shadow/highlight clipping (silhouettes, astro) |
-| `_skip_oversaturation_penalty` | bool | Don't penalize oversaturated colors (concerts, night) |
-| `_clipping_multiplier` | float | Scale clipping penalty (1.5 = stricter for B&W) |
-| `_apply_blink_penalty` | bool | Apply blink detection penalty (portraits, groups) |
+Each category in `scoring_config.json` has `filters` (numeric ranges, booleans, tags) and `modifiers` (bonus, penalty scaling). Evaluated by `CategoryFilter` in `config.py`. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the full filter and modifier reference.
 
 ### Top Picks
 
@@ -237,7 +201,7 @@ The "Top Picks" filter in the viewer uses a custom weighted score computed on-th
 - With significant face (face_ratio >= 20%): `aggregate * 0.30 + aesthetic * 0.28 + comp_score * 0.18 + face_quality * 0.24`
 - Without significant face: `aggregate * 0.30 + aesthetic * 0.426 + comp_score * 0.274` (face_quality weight redistributed proportionally)
 
-The `top_picks_score` is computed in SQL via `get_top_picks_score_sql()` in `viewer.py`.
+The `top_picks_score` is computed in SQL via `get_top_picks_score_sql()` in `api/top_picks.py`.
 
 **Note:** Default weights are optimized for TOPIQ (0.93 SRCC), which is the aesthetic model for all profiles.
 
@@ -296,7 +260,7 @@ The cache is stored in the `stats_cache` table with a 5-minute TTL. Run `--stats
 
 **Tag Lookup Table** - Run `python database.py --migrate-tags` to populate the `photo_tags` table. This enables 10-50x faster tag filtering by replacing slow `LIKE '%tag%'` scans with indexed exact-match queries.
 
-**Query Optimizations in viewer.py:**
+**Query Optimizations in api/:**
 - COUNT result caching (5 minute TTL) to avoid repeated full-table scans
 - Lazy-loaded filter dropdowns via `/api/filter_options/*` endpoints
 - EXISTS subqueries instead of IN for person filters
@@ -312,104 +276,17 @@ The cache is stored in the `stats_cache` table with a 5-minute TTL. Run `--stats
 
 ### Composition Analysis
 
-Facet uses two complementary approaches for composition scoring:
-
-**Rule-Based Analysis** (`--recompute-composition-cpu`)
-- CPU-only, fast recomputation
-- Detects subject region using edge detection and saliency
-- Computes: `power_point_score`, `leading_lines_score`, `comp_score`
-- Scores based on rule-of-thirds placement and leading line quality
-- Use when: algorithm changes, quick iteration, no GPU available
-
-**SAMP-Net Neural Network** (`--recompute-composition-gpu`)
-- GPU required (~2GB VRAM)
-- Deep learning model trained on composition quality
-- Computes: `comp_score`, `composition_pattern`
-- Identifies patterns: rule_of_thirds, diagonal, horizontal, vertical, triangular, etc.
-- Use when: better accuracy needed, pattern identification required
-
-| Command | Hardware | Updates | Speed |
-|---------|----------|---------|-------|
-| `--recompute-composition-cpu` | CPU | power_point, leading_lines, comp_score | Fast |
-| `--recompute-composition-gpu` | GPU | comp_score, composition_pattern | Slower |
-
-After either command, run `--recompute-average` to update aggregate scores.
+Two approaches: `--recompute-composition-cpu` (rule-based, fast) and `--recompute-composition-gpu` (SAMP-Net, 14 patterns). After either, run `--recompute-average` to update aggregate scores.
 
 ### Face Recognition
 
-**face_clustering.py** - Face clustering module:
-- `FaceProcessor` - Producer-consumer processor for parallel face operations with auto-tuning
-- `FaceResourceMonitor` - Monitors memory and adjusts batch size during processing
-- `FaceClusterer` - HDBSCAN-based clustering of face embeddings into persons
-- `extract_faces_from_existing()` - Extract faces from ALL photos (deletes existing faces first)
-- `refill_face_thumbnails()` - Regenerate ALL face thumbnails from original images
-- `run_face_clustering()` - Main entry point called from photos.py
-- `_check_cuml_available()` - Detect if cuML GPU clustering is available
+**face_clustering.py** - HDBSCAN-based clustering of face embeddings into persons. Key classes: `FaceProcessor`, `FaceClusterer`, `FaceResourceMonitor`.
 
-**Database tables:**
-- `faces(id, photo_path, face_index, embedding, bbox_*, person_id, confidence, face_thumbnail)` - Individual face records with pre-generated thumbnails
-- `persons(id, name, representative_face_id, face_count, centroid, auto_clustered, face_thumbnail)` - Person clusters
+**Database tables:** `faces` (embeddings, thumbnails, bbox) and `persons` (clusters, centroids, names).
 
-**Face thumbnail storage:**
-- Thumbnails are generated during scanning from full-resolution images (higher quality)
-- Stored in `faces.face_thumbnail` column as JPEG BLOBs (~5-10KB each)
-- Clustering uses stored thumbnails instead of regenerating (fast)
-- Run `--refill-face-thumbnails-force` to regenerate ALL thumbnails from original images (parallel processing)
-- Run `--refill-face-thumbnails-incremental` to generate only missing thumbnails
+**Clustering modes:** `--cluster-faces-incremental` (preserves existing persons) vs `--cluster-faces-force` (full re-cluster). Optional GPU via cuML.
 
-**Clustering modes:**
-- `--cluster-faces-incremental`: Preserves all existing persons, matches new clusters to them via centroid similarity (threshold 0.6), updates centroids after merging
-- `--cluster-faces-force`: Deletes all persons including named ones, full re-cluster
-
-**GPU clustering (cuML):**
-- Configure via `face_clustering.use_gpu` in scoring_config.json: `"auto"` (default), `"always"`, or `"never"`
-- cuML HDBSCAN is significantly faster for large datasets (80K+ faces)
-- Falls back to CPU HDBSCAN when cuML is unavailable
-- Note: `algorithm` and `leaf_size` parameters only apply to CPU clustering; cuML uses its own optimized implementation
-
-**Key methods in FaceClusterer:**
-- `cluster_faces(force=False)` - Main clustering entry point
-- `_should_use_gpu()` - Determine if GPU clustering should be used
-- `_update_database(face_to_cluster, embeddings, face_ids, force=False)` - Handles preservation logic
-- `match_face_to_person(embedding_bytes, threshold=0.6)` - Match single face to existing person
-
-**Blink detection:**
-- Uses Eye Aspect Ratio (EAR) calculated from InsightFace 106-point landmarks
-- Configurable threshold in `scoring_config.json` under `face_detection.blink_ear_threshold` (default: 0.28)
-- Run `--recompute-blinks` to re-evaluate blink detection without full rescan (processes only photos with faces)
-
-**Viewer integration:**
-- Person dropdown filter with face thumbnails
-- `/manage_persons` page for merge/rename/delete operations
-- Person avatars on photo cards
-
-### Face Recognition Workflow
-
-Complete workflow for face recognition setup:
-
-1. **Scan photos** - Process photos to extract faces and embeddings
-   ```bash
-   python photos.py /path/to/photos
-   ```
-   This extracts faces during scoring. For existing photos without faces:
-   ```bash
-   python photos.py --extract-faces-gpu-incremental
-   ```
-
-2. **Cluster faces into persons** - Group similar faces
-   ```bash
-   python photos.py --cluster-faces-incremental
-   ```
-   Or force full re-cluster (deletes existing persons):
-   ```bash
-   python photos.py --cluster-faces-force
-   ```
-
-3. **Review and merge persons** - Find duplicate clusters
-   ```bash
-   python photos.py --suggest-person-merges
-   ```
-   Opens browser to merge suggestions page. Manual merging via `/manage_persons` in viewer.
+See [docs/FACE_RECOGNITION.md](docs/FACE_RECOGNITION.md) for the complete workflow, thumbnail storage, blink detection, and viewer integration.
 
 ### Key Implementation Details
 

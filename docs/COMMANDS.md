@@ -151,7 +151,8 @@ Checks: Score ranges, face metrics, BLOB corruption, embedding sizes, orphaned f
 
 | Command | Description |
 |---------|-------------|
-| `python viewer.py` | Start Flask server on http://localhost:5000 |
+| `python run_api.py` | Start server on http://localhost:8000 (API + Angular SPA) |
+| `python run_api.py --production` | Production mode with 4 workers |
 
 ## Common Workflows
 
@@ -160,7 +161,7 @@ Checks: Score ranges, face metrics, BLOB corruption, embedding sizes, orphaned f
 python photos.py /path/to/photos     # Score all photos (auto multi-pass)
 python photos.py --cluster-faces-incremental # Cluster faces
 python database.py --migrate-tags    # Enable fast tag queries
-python viewer.py                     # View results
+python run_api.py                    # View results
 ```
 
 ### After Config Changes
@@ -174,7 +175,7 @@ python photos.py --recompute-category portrait      # Update only one category (
 python photos.py /path               # Extract faces during scan
 python photos.py --cluster-faces-incremental     # Group into persons
 python photos.py --suggest-person-merges         # Find duplicates
-# Use /manage_persons in viewer to merge/rename
+# Use /persons in viewer to merge/rename
 ```
 
 ### Multi-User Setup

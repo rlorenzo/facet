@@ -1,0 +1,69 @@
+@use '@angular/material' as mat;
+@use "tailwindcss";
+
+html {
+  @include mat.theme((
+    color: (
+      theme-type: dark,
+      primary: mat.$green-palette,
+      tertiary: mat.$cyan-palette,
+    ),
+    typography: Roboto,
+    density: -1,
+  ));
+}
+
+body {
+  color-scheme: dark;
+  background-color: #0b0b0b;
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+// Person selector: wider panel with taller rows for face avatars
+.person-select-panel {
+  min-width: 320px !important;
+
+  .mat-mdc-option {
+    min-height: 76px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+}
+
+// Scrollbar styling for dark theme
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+
+  &:hover {
+    background: #555;
+  }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (min-width: 768px) {
+  .gallery-grid {
+    grid-template-columns: var(--gallery-cols);
+  }
+}

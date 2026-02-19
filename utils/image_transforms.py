@@ -94,7 +94,7 @@ def crop_face_with_padding(img, bbox, padding=0.3, size=128, quality=85, use_cv2
             _, jpeg = cv2.imencode('.jpg', face_crop, [cv2.IMWRITE_JPEG_QUALITY, quality])
             return jpeg.tobytes()
         else:
-            # PIL path (from viewer.py, face_clustering.py)
+            # PIL path (from face_clustering.py)
             Image = _ensure_pil()
 
             pil_img = img

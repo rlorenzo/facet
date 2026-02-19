@@ -10,7 +10,7 @@ AI-powered photo quality assessment system that analyzes images using CLIP, TOPI
 - **Composition Analysis** - SAMP-Net neural network (14 patterns) or rule-based scoring
 - **Technical Analysis** - Sharpness, color harmony, exposure, dynamic range, noise, contrast
 - **Category System** - 17 content categories with specialized scoring weights
-- **Web Gallery** - Flask viewer with filtering, sorting, face recognition, and pairwise comparison
+- **Web Gallery** - FastAPI + Angular SPA with filtering, sorting, face recognition, and pairwise comparison
 - **Batch Processing** - ~4x faster GPU inference with auto-tuning and continuous streaming
 
 ## Quick Start
@@ -24,8 +24,8 @@ pip install -r requirements.txt
 python photos.py /path/to/photos
 
 # View results
-python viewer.py
-# Open http://localhost:5000
+python run_api.py
+# Open http://localhost:8000
 ```
 
 ## Documentation

@@ -5,16 +5,22 @@ Provides lightweight JSON-based translation support with:
 - Browser language auto-detection (Accept-Language header)
 - Cookie-based persistence for user preference
 - URL parameter override (?lang=xx)
-- Flask integration via context processor
+- Flask integration via context processor (optional)
+- Standalone use from FastAPI or CLI (no Flask required)
 """
 
 import json
 import os
 from functools import lru_cache
-from flask import request, g
+
+try:
+    from flask import request, g
+except ImportError:
+    request = None
+    g = None
 
 # Supported languages
-SUPPORTED_LANGUAGES = ['en', 'fr']
+SUPPORTED_LANGUAGES = ['en', 'fr', 'de', 'it', 'es']
 DEFAULT_LANGUAGE = 'en'
 
 # Module directory
@@ -26,7 +32,7 @@ _translations_cache = {}
 
 
 def get_locale():
-    """Detect the user's preferred language.
+    """Detect the user's preferred language (Flask context only).
 
     Priority order:
     1. URL parameter (?lang=xx)
@@ -35,8 +41,11 @@ def get_locale():
     4. Default language (en)
 
     Returns:
-        str: Language code ('en' or 'fr')
+        str: Language code (e.g. 'en', 'fr', 'de', 'it', 'es')
     """
+    if request is None:
+        return DEFAULT_LANGUAGE
+
     # 1. Check URL parameter
     lang = request.args.get('lang')
     if lang and lang in SUPPORTED_LANGUAGES:
